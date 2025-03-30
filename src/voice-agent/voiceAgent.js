@@ -7,6 +7,7 @@ const moment = require('moment');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const pool = require('../config/database');
 
 class VoiceAgent {
   constructor() {
@@ -192,6 +193,33 @@ class VoiceAgent {
     this.nlpManager.addNamedEntityText('date', 'thursday', ['en'], ['thursday', 'next thursday', 'coming thursday']);
     this.nlpManager.addNamedEntityText('date', 'friday', ['en'], ['friday', 'next friday', 'coming friday']);
 
+    // Add FAQ intents
+    this.nlpManager.addDocument('en', 'what is the role about', 'intent.role_details');
+    this.nlpManager.addDocument('en', 'tell me about the job', 'intent.role_details');
+    this.nlpManager.addDocument('en', 'what does this job involve', 'intent.role_details');
+    this.nlpManager.addDocument('en', 'what are the responsibilities', 'intent.role_details');
+    this.nlpManager.addDocument('en', 'what will i be doing', 'intent.role_details');
+
+    this.nlpManager.addDocument('en', 'what is the salary range', 'intent.salary_info');
+    this.nlpManager.addDocument('en', 'what is the pay', 'intent.salary_info');
+    this.nlpManager.addDocument('en', 'what is the compensation', 'intent.salary_info');
+
+    this.nlpManager.addDocument('en', 'what are the requirements', 'intent.requirements');
+    this.nlpManager.addDocument('en', 'what skills are needed', 'intent.requirements');
+    this.nlpManager.addDocument('en', 'what qualifications are needed', 'intent.requirements');
+
+    this.nlpManager.addDocument('en', 'where is the office', 'intent.location');
+    this.nlpManager.addDocument('en', 'is this remote', 'intent.location');
+    this.nlpManager.addDocument('en', 'what is the work location', 'intent.location');
+
+    // Add confirmation intents
+    this.nlpManager.addDocument('en', 'yes that is correct', 'intent.confirm');
+    this.nlpManager.addDocument('en', 'yes that works', 'intent.confirm');
+    this.nlpManager.addDocument('en', 'sure that is fine', 'intent.confirm');
+    this.nlpManager.addDocument('en', 'no that is not correct', 'intent.reject');
+    this.nlpManager.addDocument('en', 'no i need a different time', 'intent.reject');
+    this.nlpManager.addDocument('en', 'can we change the time', 'intent.reject');
+
     // Train the model
     console.log('Training NLP model...');
     this.nlpManager.train();
@@ -356,12 +384,62 @@ class VoiceAgent {
     });
   }
 
-  async conductInterview() {
+  // Add FAQ responses
+  getFAQResponse(intent) {
+    const faqResponses = {
+      'intent.role_details': 'This is a software developer position where you will be working on developing and maintaining web applications. You will be part of a team that builds scalable solutions using modern technologies.',
+      'intent.salary_info': 'The salary range for this position is competitive and will be discussed based on your experience and skills. We offer a comprehensive benefits package including health insurance and paid time off.',
+      'intent.requirements': 'We are looking for candidates with strong programming skills, preferably in JavaScript and Node.js. Experience with web development frameworks and databases is required. A bachelor\'s degree in computer science or related field is preferred.',
+      'intent.location': 'This position is based in our main office. We offer flexible work arrangements and remote work options based on team needs.'
+    };
+    return faqResponses[intent] || 'I apologize, but I don\'t have specific information about that. Would you like to speak with a human recruiter for more details?';
+  }
+
+  async getCandidateAndJobDetails(candidateId, jobId) {
+    try {
+      // Fetch candidate details
+      const { rows: candidateRows } = await pool.query(
+        'SELECT name FROM candidates WHERE id = $1',
+        [candidateId]
+      );
+      
+      if (!candidateRows.length) {
+        throw new Error('Candidate not found');
+      }
+
+      // Fetch job details
+      const { rows: jobRows } = await pool.query(
+        'SELECT title FROM jobs WHERE id = $1',
+        [jobId]
+      );
+      
+      if (!jobRows.length) {
+        throw new Error('Job not found');
+      }
+
+      return {
+        candidateName: candidateRows[0].name,
+        jobTitle: jobRows[0].title,
+        companyName: 'our company' // You can fetch this from a company table if you have one
+      };
+    } catch (error) {
+      console.error('Error fetching candidate and job details:', error);
+      throw error;
+    }
+  }
+
+  async conductInterview(candidateId, jobId) {
     try {
       console.log('Starting interview...');
       
+      // Fetch candidate and job details
+      const { candidateName, jobTitle, companyName } = await this.getCandidateAndJobDetails(candidateId, jobId);
+      
+      // Initial greeting
+      await this.speak(`Hello ${candidateName}, this is ${companyName} regarding a ${jobTitle} opportunity.`);
+      
       // Interest check
-      await this.speak('Hello! Are you interested in the software developer position?');
+      await this.speak('Are you interested in this role?');
       const interestResponse = await this.listen();
       console.log('Interest response:', interestResponse);
       const interestResult = await this.nlpManager.process('en', interestResponse);
@@ -369,12 +447,17 @@ class VoiceAgent {
       if (interestResult.intent === 'intent.not_interested') {
         await this.speak('Thank you for your time. Have a great day!');
         return {
-          interested: false
+          interested: false,
+          candidateId,
+          jobId,
+          candidateName,
+          companyName,
+          jobTitle
         };
       }
 
       // Notice period
-      await this.speak('What is your notice period in days?');
+      await this.speak('What is your current notice period?');
       const noticeResponse = await this.listen();
       console.log('Notice period response:', noticeResponse);
       const noticeResult = await this.nlpManager.process('en', noticeResponse);
@@ -385,20 +468,21 @@ class VoiceAgent {
         console.log('Extracted notice period:', noticePeriod);
       }
 
-      // Current CTC
-      await this.speak('What is your current CTC in lakhs per annum?');
-      const currentCtcResponse = await this.listen();
-      console.log('Current CTC response:', currentCtcResponse);
-      const currentCtcResult = await this.nlpManager.process('en', currentCtcResponse);
-      let currentCtc;
+      // Current and Expected CTC
+      await this.speak('Can you share your current and expected CTC?');
+      const ctcResponse = await this.listen();
+      console.log('CTC response:', ctcResponse);
       
+      // Process current CTC
+      const currentCtcResult = await this.nlpManager.process('en', ctcResponse);
+      let currentCtc;
       if (currentCtcResult.intent === 'intent.current_ctc') {
-        currentCtc = this.extractNumber(currentCtcResponse);
+        currentCtc = this.extractNumber(ctcResponse);
         console.log('Extracted current CTC:', currentCtc);
       }
 
-      // Expected CTC
-      await this.speak('What is your expected CTC in lakhs per annum?');
+      // Process expected CTC
+      await this.speak('And what is your expected CTC?');
       const expectedCtcResponse = await this.listen();
       console.log('Expected CTC response:', expectedCtcResponse);
       const expectedCtcResult = await this.nlpManager.process('en', expectedCtcResponse);
@@ -410,7 +494,7 @@ class VoiceAgent {
       }
 
       // Availability
-      await this.speak('When would you be available to start? Please mention a day of the week.');
+      await this.speak('When are you available for an interview next week?');
       const availabilityResponse = await this.listen();
       console.log('Availability response:', availabilityResponse);
       const availabilityResult = await this.nlpManager.process('en', availabilityResponse);
@@ -421,13 +505,55 @@ class VoiceAgent {
         availableDate = date ? date.option : undefined;
       }
 
+      // Confirm booking
+      const interviewDate = availableDate ? `next ${availableDate}` : 'a suitable date';
+      await this.speak(`We've scheduled your interview on ${interviewDate}. Is that correct?`);
+      const confirmationResponse = await this.listen();
+      console.log('Confirmation response:', confirmationResponse);
+      const confirmationResult = await this.nlpManager.process('en', confirmationResponse);
+
+      // Handle confirmation
+      if (confirmationResult.intent === 'intent.reject') {
+        await this.speak('I understand you need a different time. Please let us know your preferred time and we will reschedule.');
+        return {
+          interested: true,
+          noticePeriod,
+          currentCtc,
+          expectedCtc,
+          availableDate,
+          confirmed: false,
+          candidateId,
+          jobId,
+          candidateName,
+          companyName,
+          jobTitle
+        };
+      }
+
+      // Allow questions
+      await this.speak('Do you have any questions about the role?');
+      const questionResponse = await this.listen();
+      console.log('Question response:', questionResponse);
+      const questionResult = await this.nlpManager.process('en', questionResponse);
+
+      if (questionResult.intent.startsWith('intent.')) {
+        const faqResponse = this.getFAQResponse(questionResult.intent);
+        await this.speak(faqResponse);
+      }
+
       // Final response
       const response = {
         interested: true,
         noticePeriod,
         currentCtc,
         expectedCtc,
-        availableDate
+        availableDate,
+        confirmed: true,
+        candidateId,
+        jobId,
+        candidateName,
+        companyName,
+        jobTitle
       };
 
       console.log('Interview completed. Results:', response);
@@ -443,7 +569,7 @@ class VoiceAgent {
         summary += `Your expected CTC is ${expectedCtc} lakhs. `;
       }
       if (availableDate) {
-        summary += `You can start on ${availableDate}. `;
+        summary += `Your interview is scheduled for next ${availableDate}. `;
       }
       
       await this.speak(summary + 'We will get back to you soon. Have a great day!');

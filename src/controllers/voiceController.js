@@ -5,6 +5,20 @@ const fs = require('fs');
 // Conduct voice interview
 const conductVoiceInterview = async (req, res) => {
   try {
+    // Extract candidate and job IDs from request body
+    const { candidateId, jobId } = req.body;
+    
+    if (!candidateId || !jobId) {
+      return res.status(400).json({
+        error: 'Missing required parameters',
+        details: 'Both candidateId and jobId are required in the request body.',
+        example: {
+          "jobId": 10,
+          "candidateId": 10
+        }
+      });
+    }
+
     // Check if Sox exists first
     const soxPath = path.join(process.cwd(), 'sox-14.4.2', 'sox.exe');
     const resolvedPath = path.resolve(soxPath);
@@ -70,7 +84,7 @@ const conductVoiceInterview = async (req, res) => {
     }
     
     const agent = voiceAgentManager.getAgent();
-    const results = await agent.conductInterview();
+    const results = await agent.conductInterview(candidateId, jobId);
     res.json(results);
   } catch (error) {
     console.error('Error in voice interview:', error);
