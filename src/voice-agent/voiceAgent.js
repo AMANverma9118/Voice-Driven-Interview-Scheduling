@@ -14,6 +14,14 @@ class VoiceAgent {
     this.model = null;
     this.recognizer = null;
     this.isInitialized = false;
+    this.numberWords = {
+      'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+      'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+      'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
+      'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 'twenty': 20,
+      'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70,
+      'eighty': 80, 'ninety': 90, 'hundred': 100, 'thousand': 1000
+    };
   }
 
   async init() {
@@ -140,7 +148,7 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'not at this time', 'intent.not_interested');
     this.nlpManager.addDocument('en', 'i will pass', 'intent.not_interested');
 
-    // Notice period responses
+    // Notice period responses with both numeric and word numbers
     this.nlpManager.addDocument('en', 'my notice period is %number% days', 'intent.notice_period');
     this.nlpManager.addDocument('en', '%number% days notice', 'intent.notice_period');
     this.nlpManager.addDocument('en', '%number% days', 'intent.notice_period');
@@ -148,19 +156,25 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'around %number% days', 'intent.notice_period');
     this.nlpManager.addDocument('en', '%number% days notice period', 'intent.notice_period');
     this.nlpManager.addDocument('en', 'notice period of %number% days', 'intent.notice_period');
+    this.nlpManager.addDocument('en', 'my notice period is %number%', 'intent.notice_period');
+    this.nlpManager.addDocument('en', 'i have %number% days notice', 'intent.notice_period');
 
-    // CTC responses
+    // CTC responses with both numeric and word numbers
     this.nlpManager.addDocument('en', 'my current ctc is %number% lakhs', 'intent.current_ctc');
     this.nlpManager.addDocument('en', 'i make %number% lakhs', 'intent.current_ctc');
     this.nlpManager.addDocument('en', 'currently %number% lakhs', 'intent.current_ctc');
     this.nlpManager.addDocument('en', 'current salary is %number% lakhs', 'intent.current_ctc');
     this.nlpManager.addDocument('en', '%number% lakhs currently', 'intent.current_ctc');
+    this.nlpManager.addDocument('en', 'my current salary is %number% lakhs', 'intent.current_ctc');
+    this.nlpManager.addDocument('en', 'i am earning %number% lakhs', 'intent.current_ctc');
 
     this.nlpManager.addDocument('en', 'my expected ctc is %number% lakhs', 'intent.expected_ctc');
     this.nlpManager.addDocument('en', 'i expect %number% lakhs', 'intent.expected_ctc');
     this.nlpManager.addDocument('en', 'looking for %number% lakhs', 'intent.expected_ctc');
     this.nlpManager.addDocument('en', 'expecting %number% lakhs', 'intent.expected_ctc');
     this.nlpManager.addDocument('en', '%number% lakhs expected', 'intent.expected_ctc');
+    this.nlpManager.addDocument('en', 'i would like %number% lakhs', 'intent.expected_ctc');
+    this.nlpManager.addDocument('en', 'my expected salary is %number% lakhs', 'intent.expected_ctc');
 
     // Availability responses
     this.nlpManager.addDocument('en', 'i am available on %date%', 'intent.availability');
@@ -182,6 +196,68 @@ class VoiceAgent {
     console.log('Training NLP model...');
     this.nlpManager.train();
     console.log('NLP model trained successfully');
+  }
+
+  convertWordToNumber(word) {
+    const words = word.toLowerCase().split(' ');
+    let result = 0;
+    let current = 0;
+
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      // Handle lakh
+      if (word === 'lakh' || word === 'lakhs') {
+        current = (current || 1) * 100000;
+        continue;
+      }
+      // Handle other number words
+      if (this.numberWords[word] !== undefined) {
+        if (this.numberWords[word] === 100 || this.numberWords[word] === 1000) {
+          current *= this.numberWords[word];
+        } else {
+          current += this.numberWords[word];
+        }
+      }
+    }
+
+    result += current;
+    return result;
+  }
+
+  extractNumber(text) {
+    // First try to find a numeric number
+    const numericMatch = text.match(/\d+/);
+    if (numericMatch) {
+      return parseInt(numericMatch[0]);
+    }
+
+    // If no numeric number found, try to convert word numbers
+    const words = text.toLowerCase().split(' ');
+    let numberPhrase = '';
+    let foundNumber = false;
+
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      // Check for number words or 'lakh'
+      if (this.numberWords[word] !== undefined || word === 'lakh' || word === 'lakhs') {
+        foundNumber = true;
+        numberPhrase += word + ' ';
+      } else if (foundNumber) {
+        // If we found a number but now hit a non-number word, break
+        break;
+      }
+    }
+
+    if (numberPhrase) {
+      const number = this.convertWordToNumber(numberPhrase.trim());
+      // If the number is in lakhs, divide by 100000 to get the lakh value
+      if (number >= 100000) {
+        return number / 100000;
+      }
+      return number;
+    }
+
+    return null;
   }
 
   async speak(text) {
@@ -208,7 +284,7 @@ class VoiceAgent {
         console.log('\nStarting recording...');
         console.log('Please speak when you see "Recording..." (5 seconds)');
 
-        // Use Windows audio API directly
+        // Use Windows audio API directly with improved settings
         const soxProcess = spawn(process.env.SOX_PATH, [
           '-t', 'waveaudio',     // Use Windows audio API
           '-d',                  // Use default device
@@ -217,7 +293,8 @@ class VoiceAgent {
           '-c', '1',             // Mono
           '-b', '16',            // Bit depth
           outputFile,            // Output file
-          'trim', '0', '5'       // Record for 5 seconds
+          'trim', '0', '5',      // Record for 5 seconds
+          'gain', '10'           // Increase gain for better recognition
         ]);
 
         console.log('Recording...');
@@ -304,8 +381,8 @@ class VoiceAgent {
       let noticePeriod;
       
       if (noticeResult.intent === 'intent.notice_period') {
-        const number = noticeResult.entities.find(e => e.entity === 'number');
-        noticePeriod = number ? parseInt(number.resolution.value) : undefined;
+        noticePeriod = this.extractNumber(noticeResponse);
+        console.log('Extracted notice period:', noticePeriod);
       }
 
       // Current CTC
@@ -316,8 +393,8 @@ class VoiceAgent {
       let currentCtc;
       
       if (currentCtcResult.intent === 'intent.current_ctc') {
-        const number = currentCtcResult.entities.find(e => e.entity === 'number');
-        currentCtc = number ? parseFloat(number.resolution.value) : undefined;
+        currentCtc = this.extractNumber(currentCtcResponse);
+        console.log('Extracted current CTC:', currentCtc);
       }
 
       // Expected CTC
@@ -328,8 +405,8 @@ class VoiceAgent {
       let expectedCtc;
       
       if (expectedCtcResult.intent === 'intent.expected_ctc') {
-        const number = expectedCtcResult.entities.find(e => e.entity === 'number');
-        expectedCtc = number ? parseFloat(number.resolution.value) : undefined;
+        expectedCtc = this.extractNumber(expectedCtcResponse);
+        console.log('Extracted expected CTC:', expectedCtc);
       }
 
       // Availability
