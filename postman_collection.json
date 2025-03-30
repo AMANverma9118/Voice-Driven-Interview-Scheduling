@@ -1,0 +1,250 @@
+{
+  "info": {
+    "name": "Voice-Driven Interview Scheduler API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "Get All Jobs",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/jobs",
+            "description": "Retrieve all job listings"
+          }
+        },
+        {
+          "name": "Create Job",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/jobs",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Senior Software Engineer\",\n    \"description\": \"Looking for an experienced software engineer with strong Node.js skills\",\n    \"requirements\": \"5+ years of experience in Node.js, React, and MySQL\"\n}"
+            },
+            "description": "Create a new job listing"
+          }
+        },
+        {
+          "name": "Get Job by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/jobs/1",
+            "description": "Retrieve a specific job by ID"
+          }
+        },
+        {
+          "name": "Update Job",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/jobs/1",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Senior Software Engineer (Updated)\",\n    \"description\": \"Looking for an experienced software engineer with strong Node.js skills\",\n    \"requirements\": \"5+ years of experience in Node.js, React, and MySQL\"\n}"
+            },
+            "description": "Update an existing job"
+          }
+        },
+        {
+          "name": "Delete Job",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/jobs/1",
+            "description": "Delete a job listing"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Candidates",
+      "item": [
+        {
+          "name": "Get All Candidates",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/candidates",
+            "description": "Retrieve all candidates"
+          }
+        },
+        {
+          "name": "Create Candidate",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/candidates",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"John Doe\",\n    \"phone\": \"+1234567890\",\n    \"email\": \"john@example.com\",\n    \"current_ctc\": 15.5,\n    \"expected_ctc\": 20.0,\n    \"notice_period\": 30,\n    \"experience_years\": 5\n}"
+            },
+            "description": "Create a new candidate"
+          }
+        },
+        {
+          "name": "Get Candidate by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/candidates/1",
+            "description": "Retrieve a specific candidate by ID"
+          }
+        },
+        {
+          "name": "Update Candidate",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/candidates/1",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"John Doe\",\n    \"phone\": \"+1234567890\",\n    \"email\": \"john.updated@example.com\",\n    \"current_ctc\": 16.0,\n    \"expected_ctc\": 21.0,\n    \"notice_period\": 30,\n    \"experience_years\": 5\n}"
+            },
+            "description": "Update an existing candidate"
+          }
+        },
+        {
+          "name": "Delete Candidate",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/candidates/1",
+            "description": "Delete a candidate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "Get All Appointments",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/appointments",
+            "description": "Retrieve all appointments"
+          }
+        },
+        {
+          "name": "Create Appointment",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/appointments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"job_id\": 1,\n    \"candidate_id\": 1,\n    \"date_time\": \"2024-03-30T10:00:00Z\",\n    \"status\": \"scheduled\"\n}"
+            },
+            "description": "Create a new appointment"
+          }
+        },
+        {
+          "name": "Get Appointment by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/appointments/1",
+            "description": "Retrieve a specific appointment by ID"
+          }
+        },
+        {
+          "name": "Update Appointment",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/appointments/1",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"job_id\": 1,\n    \"candidate_id\": 1,\n    \"date_time\": \"2024-03-30T11:00:00Z\",\n    \"status\": \"scheduled\"\n}"
+            },
+            "description": "Update an existing appointment"
+          }
+        },
+        {
+          "name": "Delete Appointment",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/appointments/1",
+            "description": "Delete an appointment"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Voice Interview",
+      "item": [
+        {
+          "name": "Start Voice Interview",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/voice/start-interview",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"jobId\": 1,\n    \"candidateId\": 1\n}"
+            },
+            "description": "Start a voice interview with a candidate"
+          }
+        },
+        {
+          "name": "Test Voice",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/voice/test",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"text\": \"Hello, this is a test message\"\n}"
+            },
+            "description": "Test the voice synthesis"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    }
+  ]
+} 
