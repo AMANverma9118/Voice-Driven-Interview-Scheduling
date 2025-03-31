@@ -6,12 +6,12 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   },
-  // Neon-specific connection settings
-  max: 10, // Reduce max connections
-  idleTimeoutMillis: 10000, // Reduce idle timeout
-  connectionTimeoutMillis: 10000, // Increase connection timeout to 10 seconds
-  maxRetries: 3, // Add retry attempts
-  retryDelay: 1000, // Delay between retries in ms
+
+  max: 10,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 10000,
+  maxRetries: 3,
+  retryDelay: 1000, 
 });
 
 // Test the connection with retries
