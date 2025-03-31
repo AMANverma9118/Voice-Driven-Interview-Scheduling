@@ -193,6 +193,18 @@ class VoiceAgent {
     this.nlpManager.addNamedEntityText('date', 'thursday', ['en'], ['thursday', 'next thursday', 'coming thursday']);
     this.nlpManager.addNamedEntityText('date', 'friday', ['en'], ['friday', 'next friday', 'coming friday']);
 
+    // Add more variations for days of the week
+    this.nlpManager.addNamedEntityText('date', 'saturday', ['en'], ['saturday', 'next saturday', 'coming saturday']);
+    this.nlpManager.addNamedEntityText('date', 'sunday', ['en'], ['sunday', 'next sunday', 'coming sunday']);
+
+    // Add more variations for availability responses
+    this.nlpManager.addDocument('en', 'i am available on saturday', 'intent.availability');
+    this.nlpManager.addDocument('en', 'i am available on sunday', 'intent.availability');
+    this.nlpManager.addDocument('en', 'saturday works for me', 'intent.availability');
+    this.nlpManager.addDocument('en', 'sunday works for me', 'intent.availability');
+    this.nlpManager.addDocument('en', 'can do saturday', 'intent.availability');
+    this.nlpManager.addDocument('en', 'can do sunday', 'intent.availability');
+
     // Add FAQ intents
     this.nlpManager.addDocument('en', 'what is the role about', 'intent.role_details');
     this.nlpManager.addDocument('en', 'tell me about the job', 'intent.role_details');
@@ -220,10 +232,40 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'no i need a different time', 'intent.reject');
     this.nlpManager.addDocument('en', 'can we change the time', 'intent.reject');
 
+    // Add more variations for interest responses
+    this.nlpManager.addDocument('en', 'i am very interested', 'intent.interest');
+    this.nlpManager.addDocument('en', 'i would love to', 'intent.interest');
+
+    // Add more variations for notice period
+    this.nlpManager.addDocument('en', 'my notice period is about %number% days', 'intent.notice_period');
+    this.nlpManager.addDocument('en', 'i need %number% days notice', 'intent.notice_period');
+
+    // Add more variations for CTC
+    this.nlpManager.addDocument('en', 'my current package is %number% lakhs', 'intent.current_ctc');
+    this.nlpManager.addDocument('en', 'i draw %number% lakhs', 'intent.current_ctc');
+
+    // Add more variations for expected CTC
+    this.nlpManager.addDocument('en', 'i am looking for %number% lakhs', 'intent.expected_ctc');
+    this.nlpManager.addDocument('en', 'i expect a package of %number% lakhs', 'intent.expected_ctc');
+
+    // Add more variations for availability
+    this.nlpManager.addDocument('en', 'i am free next %date%', 'intent.availability');
+    this.nlpManager.addDocument('en', 'i can be available on %date%', 'intent.availability');
+
+    // Improve logging for error diagnosis
+    console.log('NLP setup complete with additional variations for intents');
+
     // Train the model
     console.log('Training NLP model...');
     this.nlpManager.train();
     console.log('NLP model trained successfully');
+
+    // Add specific response for no questions
+    this.nlpManager.addDocument('en', "i don't have any questions", 'intent.no_questions');
+    this.nlpManager.addAnswer('en', 'intent.no_questions', 'Okay');
+
+    // Improve post-processing for better accuracy
+    console.log('NLP setup enhanced with additional variations for intents and improved post-processing');
   }
 
   convertWordToNumber(word) {
@@ -505,6 +547,11 @@ class VoiceAgent {
         availableDate = date ? date.option : undefined;
       }
 
+      // Convert availableDate to a valid date format
+      if (availableDate) {
+        availableDate = this.getNextDate(availableDate);
+      }
+
       // Confirm booking
       const interviewDate = availableDate ? `next ${availableDate}` : 'a suitable date';
       await this.speak(`We've scheduled your interview on ${interviewDate}. Is that correct?`);
@@ -536,10 +583,15 @@ class VoiceAgent {
       console.log('Question response:', questionResponse);
       const questionResult = await this.nlpManager.process('en', questionResponse);
 
-      if (questionResult.intent.startsWith('intent.')) {
+      // Handle no questions intent
+      if (questionResult.intent === 'intent.no_questions') {
+        await this.speak('Okay');
+      } else if (questionResult.intent.startsWith('intent.')) {
         const faqResponse = this.getFAQResponse(questionResult.intent);
         await this.speak(faqResponse);
       }
+
+      console.log('Recognized intent for question response:', questionResult.intent);
 
       // Final response
       const response = {
@@ -574,6 +626,29 @@ class VoiceAgent {
       
       await this.speak(summary + 'We will get back to you soon. Have a great day!');
       
+      // Enhanced logging for debugging
+      console.log('Preparing to save interview results to the database...');
+      console.log('Candidate ID:', candidateId);
+      console.log('Job ID:', jobId);
+      console.log('Interested:', response.interested);
+      console.log('Notice Period:', response.noticePeriod);
+      console.log('Current CTC:', response.currentCtc);
+      console.log('Expected CTC:', response.expectedCtc);
+      console.log('Available Date:', response.availableDate);
+      console.log('Confirmed:', response.confirmed);
+
+      // Save interview results to the database
+      const query = 'INSERT INTO interview_results (candidate_id, job_id, interested, notice_period, current_ctc, expected_ctc, available_date, confirmed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';
+      const values = [candidateId, jobId, response.interested, response.noticePeriod, response.currentCtc, response.expectedCtc, response.availableDate, response.confirmed];
+
+      pool.query(query, values, (error, result) => {
+        if (error) {
+          console.error('Error saving interview results:', error);
+        } else {
+          console.log('Interview results saved successfully');
+        }
+      });
+
       return response;
     } catch (error) {
       console.error('Error during interview:', error);
@@ -593,6 +668,16 @@ class VoiceAgent {
       this.model = null;
     }
     this.isInitialized = false;
+  }
+
+  // Function to get the next occurrence of a day
+  getNextDate(day) {
+    const today = moment();
+    const targetDay = moment().day(day);
+    if (targetDay.isBefore(today, 'day')) {
+      targetDay.add(1, 'weeks');
+    }
+    return targetDay.format('YYYY-MM-DD');
   }
 }
 

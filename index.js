@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const config = require("./src/config/config");
 const voiceAgentManager = require("./src/voice-agent/voiceAgentManager");
+const callRoutes = require('./src/routes/callRoutes');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use("/api/jobs", require("./src/routes/jobs"));
 app.use("/api/candidates", require("./src/routes/candidates"));
 app.use("/api/appointments", require("./src/routes/appointments"));
 app.use("/api/voice", require("./src/routes/voice"));
+app.use('/api/calls', callRoutes);
 
 // Basic route for testing
 app.get("/", (req, res) => {

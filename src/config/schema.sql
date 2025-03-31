@@ -44,14 +44,17 @@ CREATE TABLE IF NOT EXISTS conversations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create interview_slots table
-CREATE TABLE IF NOT EXISTS interview_slots (
+-- Create interview_results table
+CREATE TABLE IF NOT EXISTS interview_results (
     id SERIAL PRIMARY KEY,
+    candidate_id INTEGER REFERENCES candidates(id),
     job_id INTEGER REFERENCES jobs(id),
-    date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    is_available BOOLEAN DEFAULT TRUE,
+    interested BOOLEAN,
+    notice_period INTEGER,
+    current_ctc DECIMAL(10,2),
+    expected_ctc DECIMAL(10,2),
+    available_date DATE,
+    confirmed BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -9,7 +9,7 @@ const pool = new Pool({
   // Neon-specific connection settings
   max: 10, // Reduce max connections
   idleTimeoutMillis: 10000, // Reduce idle timeout
-  connectionTimeoutMillis: 5000, // Increase connection timeout
+  connectionTimeoutMillis: 10000, // Increase connection timeout to 10 seconds
   maxRetries: 3, // Add retry attempts
   retryDelay: 1000, // Delay between retries in ms
 });
