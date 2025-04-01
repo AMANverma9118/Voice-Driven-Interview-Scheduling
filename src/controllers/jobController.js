@@ -1,6 +1,5 @@
 const pool = require('../config/database');
 
-// Get all jobs
 const getAllJobs = async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM jobs ORDER BY created_at DESC');
@@ -11,7 +10,6 @@ const getAllJobs = async (req, res) => {
   }
 };
 
-// Get a specific job
 const getJobById = async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
@@ -26,7 +24,6 @@ const getJobById = async (req, res) => {
   }
 };
 
-// Create a new job
 const createJob = async (req, res) => {
   try {
     const { title, description, requirements } = req.body;
@@ -43,7 +40,6 @@ const createJob = async (req, res) => {
   }
 };
 
-// Update a job
 const updateJob = async (req, res) => {
   try {
     const { title, description, requirements } = req.body;
@@ -62,8 +58,7 @@ const updateJob = async (req, res) => {
     res.status(500).json({ error: 'Failed to update job', details: error.message });
   }
 };
-
-// Delete a job
+  
 const deleteJob = async (req, res) => {
   try {
     const { rows } = await pool.query('DELETE FROM jobs WHERE id = $1 RETURNING *', [req.params.id]);

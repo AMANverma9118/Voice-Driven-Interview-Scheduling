@@ -8,7 +8,6 @@ const {
   deleteCandidate
 } = require('../controllers/candidateController');
 
-// Routes
 router.get('/', getAllCandidates);
 router.get('/:id', getCandidateById);
 router.post('/', createCandidate);

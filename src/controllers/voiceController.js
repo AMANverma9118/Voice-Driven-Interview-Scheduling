@@ -2,10 +2,9 @@ const voiceAgentManager = require('../voice-agent/voiceAgentManager');
 const path = require('path');
 const fs = require('fs');
 
-// Conduct voice interview
+
 const conductVoiceInterview = async (req, res) => {
   try {
-    // Extract candidate and job IDs from request body
     const { candidateId, jobId } = req.body;
     
     if (!candidateId || !jobId) {
@@ -19,7 +18,6 @@ const conductVoiceInterview = async (req, res) => {
       });
     }
 
-    // Check if Sox exists first
     const soxPath = path.join(process.cwd(), 'sox-14.4.2', 'sox.exe');
     const resolvedPath = path.resolve(soxPath);
     const soxDir = path.dirname(resolvedPath);
@@ -28,7 +26,6 @@ const conductVoiceInterview = async (req, res) => {
     console.log('Current working directory:', process.cwd());
     console.log('Looking for Sox at:', resolvedPath);
     
-    // First check if the directory exists
     if (!fs.existsSync(soxDir)) {
       return res.status(503).json({
         error: 'Voice features are not available',
@@ -48,7 +45,6 @@ const conductVoiceInterview = async (req, res) => {
       });
     }
     
-    // Then check if the executable exists
     if (!fs.existsSync(resolvedPath)) {
       return res.status(503).json({
         error: 'Voice features are not available',
@@ -67,10 +63,8 @@ const conductVoiceInterview = async (req, res) => {
       });
     }
 
-    // Try to initialize voice agent
     await voiceAgentManager.initialize();
     
-    // Check if voice features are available
     if (!voiceAgentManager.isInitialized) {
       return res.status(503).json({
         error: 'Voice features are not available',
@@ -100,7 +94,6 @@ const conductVoiceInterview = async (req, res) => {
   }
 };
 
-// Clean up when the API shuts down
 const cleanup = () => {
   voiceAgentManager.cleanup();
   process.exit(0);

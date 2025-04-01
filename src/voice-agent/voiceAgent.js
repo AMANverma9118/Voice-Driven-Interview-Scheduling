@@ -32,10 +32,10 @@ class VoiceAgent {
     }
 
     try {
-      // Setup NLP
+  
       await this.setupNLP();
       
-      // Initialize Vosk model
+    
       const modelPath = path.resolve(process.cwd(), process.env.VOSK_MODEL_PATH);
       if (!fs.existsSync(modelPath)) {
         throw new Error(`Vosk model not found at ${modelPath}. Please download the model and set VOSK_MODEL_PATH environment variable.`);
@@ -44,7 +44,6 @@ class VoiceAgent {
       console.log('Initializing Vosk model from:', modelPath);
       vosk.setLogLevel(-1); // Disable logging
       
-      // Create model and recognizer
       this.model = new vosk.Model(modelPath);
       if (!this.model) {
         throw new Error('Failed to create Vosk model');
@@ -57,14 +56,12 @@ class VoiceAgent {
       
       console.log('Vosk model initialized successfully');
 
-      // Set sox path and check audio devices
       const soxPath = process.env.SOX_PATH || path.join(process.cwd(), 'sox-14.4.2', 'sox.exe');
       if (!fs.existsSync(soxPath)) {
         throw new Error(`Sox not found at ${soxPath}. Please set SOX_PATH environment variable to your sox.exe location.`);
       }
       process.env.PATH = `${path.dirname(soxPath)};${process.env.PATH}`;
 
-      // Check for audio devices
       await this.checkAudioDevices();
       
       this.isInitialized = true;
@@ -78,7 +75,6 @@ class VoiceAgent {
 
   async checkAudioDevices() {
     return new Promise((resolve, reject) => {
-      // First try using Windows' built-in audio device enumeration
       const powershellProcess = spawn('powershell', [
         '-Command',
         'Get-WmiObject Win32_SoundDevice | Where-Object { $_.ConfigManagerErrorCode -eq 0 -and $_.StatusInfo -eq 3 } | Select-Object Name, DeviceID'
@@ -97,13 +93,11 @@ class VoiceAgent {
       powershellProcess.on('close', (code) => {
         if (code !== 0) {
           console.warn('Failed to list audio devices using PowerShell, falling back to default device');
-          // Fall back to using default device
-          this.defaultAudioDevice = { id: '-d', name: 'Default Audio Device' };
+            this.defaultAudioDevice = { id: '-d', name: 'Default Audio Device' };
           resolve();
           return;
         }
 
-        // Parse PowerShell output
         const lines = devices.split('\n');
         const audioDevices = [];
 
@@ -125,7 +119,6 @@ class VoiceAgent {
 
       powershellProcess.on('error', (error) => {
         console.warn('Failed to execute PowerShell command:', error);
-        // Fall back to using default device
         this.defaultAudioDevice = { id: '-d', name: 'Default Audio Device' };
         resolve();
       });
@@ -133,7 +126,6 @@ class VoiceAgent {
   }
 
   setupNLP() {
-    // Interest responses
     this.nlpManager.addDocument('en', 'yes', 'intent.interest');
     this.nlpManager.addDocument('en', 'yeah', 'intent.interest');
     this.nlpManager.addDocument('en', 'sure', 'intent.interest');
@@ -149,7 +141,6 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'not at this time', 'intent.not_interested');
     this.nlpManager.addDocument('en', 'i will pass', 'intent.not_interested');
 
-    // Notice period responses with both numeric and word numbers
     this.nlpManager.addDocument('en', 'my notice period is %number% days', 'intent.notice_period');
     this.nlpManager.addDocument('en', '%number% days notice', 'intent.notice_period');
     this.nlpManager.addDocument('en', '%number% days', 'intent.notice_period');
@@ -160,7 +151,6 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'my notice period is %number%', 'intent.notice_period');
     this.nlpManager.addDocument('en', 'i have %number% days notice', 'intent.notice_period');
 
-    // CTC responses with both numeric and word numbers
     this.nlpManager.addDocument('en', 'my current ctc is %number% lakhs', 'intent.current_ctc');
     this.nlpManager.addDocument('en', 'i make %number% lakhs', 'intent.current_ctc');
     this.nlpManager.addDocument('en', 'currently %number% lakhs', 'intent.current_ctc');
@@ -177,7 +167,6 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'i would like %number% lakhs', 'intent.expected_ctc');
     this.nlpManager.addDocument('en', 'my expected salary is %number% lakhs', 'intent.expected_ctc');
 
-    // Availability responses
     this.nlpManager.addDocument('en', 'i am available on %date%', 'intent.availability');
     this.nlpManager.addDocument('en', 'available %date%', 'intent.availability');
     this.nlpManager.addDocument('en', 'can do %date%', 'intent.availability');
@@ -186,18 +175,15 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'next %date%', 'intent.availability');
     this.nlpManager.addDocument('en', '%date% is good', 'intent.availability');
     
-    // Add more date entities
     this.nlpManager.addNamedEntityText('date', 'monday', ['en'], ['monday', 'next monday', 'coming monday']);
     this.nlpManager.addNamedEntityText('date', 'tuesday', ['en'], ['tuesday', 'next tuesday', 'coming tuesday']);
     this.nlpManager.addNamedEntityText('date', 'wednesday', ['en'], ['wednesday', 'next wednesday', 'coming wednesday']);
     this.nlpManager.addNamedEntityText('date', 'thursday', ['en'], ['thursday', 'next thursday', 'coming thursday']);
     this.nlpManager.addNamedEntityText('date', 'friday', ['en'], ['friday', 'next friday', 'coming friday']);
 
-    // Add more variations for days of the week
     this.nlpManager.addNamedEntityText('date', 'saturday', ['en'], ['saturday', 'next saturday', 'coming saturday']);
     this.nlpManager.addNamedEntityText('date', 'sunday', ['en'], ['sunday', 'next sunday', 'coming sunday']);
 
-    // Add more variations for availability responses
     this.nlpManager.addDocument('en', 'i am available on saturday', 'intent.availability');
     this.nlpManager.addDocument('en', 'i am available on sunday', 'intent.availability');
     this.nlpManager.addDocument('en', 'saturday works for me', 'intent.availability');
@@ -205,7 +191,6 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'can do saturday', 'intent.availability');
     this.nlpManager.addDocument('en', 'can do sunday', 'intent.availability');
 
-    // Add FAQ intents
     this.nlpManager.addDocument('en', 'what is the role about', 'intent.role_details');
     this.nlpManager.addDocument('en', 'tell me about the job', 'intent.role_details');
     this.nlpManager.addDocument('en', 'what does this job involve', 'intent.role_details');
@@ -224,7 +209,6 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'is this remote', 'intent.location');
     this.nlpManager.addDocument('en', 'what is the work location', 'intent.location');
 
-    // Add confirmation intents
     this.nlpManager.addDocument('en', 'yes that is correct', 'intent.confirm');
     this.nlpManager.addDocument('en', 'yes that works', 'intent.confirm');
     this.nlpManager.addDocument('en', 'sure that is fine', 'intent.confirm');
@@ -232,39 +216,31 @@ class VoiceAgent {
     this.nlpManager.addDocument('en', 'no i need a different time', 'intent.reject');
     this.nlpManager.addDocument('en', 'can we change the time', 'intent.reject');
 
-    // Add more variations for interest responses
     this.nlpManager.addDocument('en', 'i am very interested', 'intent.interest');
     this.nlpManager.addDocument('en', 'i would love to', 'intent.interest');
 
-    // Add more variations for notice period
     this.nlpManager.addDocument('en', 'my notice period is about %number% days', 'intent.notice_period');
     this.nlpManager.addDocument('en', 'i need %number% days notice', 'intent.notice_period');
 
-    // Add more variations for CTC
     this.nlpManager.addDocument('en', 'my current package is %number% lakhs', 'intent.current_ctc');
     this.nlpManager.addDocument('en', 'i draw %number% lakhs', 'intent.current_ctc');
 
-    // Add more variations for expected CTC
     this.nlpManager.addDocument('en', 'i am looking for %number% lakhs', 'intent.expected_ctc');
     this.nlpManager.addDocument('en', 'i expect a package of %number% lakhs', 'intent.expected_ctc');
 
-    // Add more variations for availability
     this.nlpManager.addDocument('en', 'i am free next %date%', 'intent.availability');
     this.nlpManager.addDocument('en', 'i can be available on %date%', 'intent.availability');
 
-    // Improve logging for error diagnosis
     console.log('NLP setup complete with additional variations for intents');
 
-    // Train the model
     console.log('Training NLP model...');
     this.nlpManager.train();
     console.log('NLP model trained successfully');
 
-    // Add specific response for no questions
+    
     this.nlpManager.addDocument('en', "i don't have any questions", 'intent.no_questions');
     this.nlpManager.addAnswer('en', 'intent.no_questions', 'Okay');
 
-    // Improve post-processing for better accuracy
     console.log('NLP setup enhanced with additional variations for intents and improved post-processing');
   }
 
@@ -275,12 +251,10 @@ class VoiceAgent {
 
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
-      // Handle lakh
       if (word === 'lakh' || word === 'lakhs') {
         current = (current || 1) * 100000;
         continue;
       }
-      // Handle other number words
       if (this.numberWords[word] !== undefined) {
         if (this.numberWords[word] === 100 || this.numberWords[word] === 1000) {
           current *= this.numberWords[word];
@@ -295,32 +269,27 @@ class VoiceAgent {
   }
 
   extractNumber(text) {
-    // First try to find a numeric number
     const numericMatch = text.match(/\d+/);
     if (numericMatch) {
       return parseInt(numericMatch[0]);
     }
 
-    // If no numeric number found, try to convert word numbers
     const words = text.toLowerCase().split(' ');
     let numberPhrase = '';
     let foundNumber = false;
 
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
-      // Check for number words or 'lakh'
       if (this.numberWords[word] !== undefined || word === 'lakh' || word === 'lakhs') {
         foundNumber = true;
         numberPhrase += word + ' ';
       } else if (foundNumber) {
-        // If we found a number but now hit a non-number word, break
         break;
       }
     }
 
     if (numberPhrase) {
       const number = this.convertWordToNumber(numberPhrase.trim());
-      // If the number is in lakhs, divide by 100000 to get the lakh value
       if (number >= 100000) {
         return number / 100000;
       }
@@ -354,7 +323,6 @@ class VoiceAgent {
         console.log('\nStarting recording...');
         console.log('Please speak when you see "Recording..." (5 seconds)');
 
-        // Use Windows audio API directly with improved settings
         const soxProcess = spawn(process.env.SOX_PATH, [
           '-t', 'waveaudio',     // Use Windows audio API
           '-d',                  // Use default device
@@ -381,7 +349,6 @@ class VoiceAgent {
           reject(err);
         });
 
-        // Wait for recording to complete
         soxProcess.on('close', async (code) => {
           if (code !== 0) {
             console.error('Recording failed with code:', code);
@@ -392,10 +359,8 @@ class VoiceAgent {
           try {
             console.log('Processing audio...');
             
-            // Read the file directly
             const audioData = fs.readFileSync(outputFile);
             
-            // Process with Vosk
             if (this.recognizer.acceptWaveform(audioData)) {
               const result = this.recognizer.result();
               console.log('Speech detected:', result.text);
@@ -406,7 +371,6 @@ class VoiceAgent {
               resolve(finalResult.text || '');
             }
 
-            // Clean up
             try {
               fs.unlinkSync(outputFile);
             } catch (err) {
@@ -426,7 +390,6 @@ class VoiceAgent {
     });
   }
 
-  // Add FAQ responses
   getFAQResponse(intent) {
     const faqResponses = {
       'intent.role_details': 'This is a software developer position where you will be working on developing and maintaining web applications. You will be part of a team that builds scalable solutions using modern technologies.',
@@ -439,7 +402,6 @@ class VoiceAgent {
 
   async getCandidateAndJobDetails(candidateId, jobId) {
     try {
-      // Fetch candidate details
       const { rows: candidateRows } = await pool.query(
         'SELECT name FROM candidates WHERE id = $1',
         [candidateId]
@@ -449,7 +411,6 @@ class VoiceAgent {
         throw new Error('Candidate not found');
       }
 
-      // Fetch job details
       const { rows: jobRows } = await pool.query(
         'SELECT title FROM jobs WHERE id = $1',
         [jobId]
@@ -474,13 +435,10 @@ class VoiceAgent {
     try {
       console.log('Starting interview...');
       
-      // Fetch candidate and job details
       const { candidateName, jobTitle, companyName } = await this.getCandidateAndJobDetails(candidateId, jobId);
       
-      // Initial greeting
       await this.speak(`Hello ${candidateName}, this is ${companyName} regarding a ${jobTitle} opportunity.`);
       
-      // Interest check
       await this.speak('Are you interested in this role?');
       const interestResponse = await this.listen();
       console.log('Interest response:', interestResponse);
@@ -498,7 +456,6 @@ class VoiceAgent {
         };
       }
 
-      // Notice period
       await this.speak('What is your current notice period?');
       const noticeResponse = await this.listen();
       console.log('Notice period response:', noticeResponse);
@@ -510,12 +467,10 @@ class VoiceAgent {
         console.log('Extracted notice period:', noticePeriod);
       }
 
-      // Current and Expected CTC
       await this.speak('Can you share your current and expected CTC?');
       const ctcResponse = await this.listen();
       console.log('CTC response:', ctcResponse);
       
-      // Process current CTC
       const currentCtcResult = await this.nlpManager.process('en', ctcResponse);
       let currentCtc;
       if (currentCtcResult.intent === 'intent.current_ctc') {
@@ -523,7 +478,6 @@ class VoiceAgent {
         console.log('Extracted current CTC:', currentCtc);
       }
 
-      // Process expected CTC
       await this.speak('And what is your expected CTC?');
       const expectedCtcResponse = await this.listen();
       console.log('Expected CTC response:', expectedCtcResponse);
@@ -535,7 +489,6 @@ class VoiceAgent {
         console.log('Extracted expected CTC:', expectedCtc);
       }
 
-      // Availability
       await this.speak('When are you available for an interview next week?');
       const availabilityResponse = await this.listen();
       console.log('Availability response:', availabilityResponse);
@@ -547,19 +500,16 @@ class VoiceAgent {
         availableDate = date ? date.option : undefined;
       }
 
-      // Convert availableDate to a valid date format
       if (availableDate) {
         availableDate = this.getNextDate(availableDate);
       }
 
-      // Confirm booking
       const interviewDate = availableDate ? `next ${availableDate}` : 'a suitable date';
       await this.speak(`We've scheduled your interview on ${interviewDate}. Is that correct?`);
       const confirmationResponse = await this.listen();
       console.log('Confirmation response:', confirmationResponse);
       const confirmationResult = await this.nlpManager.process('en', confirmationResponse);
 
-      // Handle confirmation
       if (confirmationResult.intent === 'intent.reject') {
         await this.speak('I understand you need a different time. Please let us know your preferred time and we will reschedule.');
         return {
@@ -577,13 +527,11 @@ class VoiceAgent {
         };
       }
 
-      // Allow questions
       await this.speak('Do you have any questions about the role?');
       const questionResponse = await this.listen();
       console.log('Question response:', questionResponse);
       const questionResult = await this.nlpManager.process('en', questionResponse);
 
-      // Handle no questions intent
       if (questionResult.intent === 'intent.no_questions') {
         await this.speak('Okay');
       } else if (questionResult.intent.startsWith('intent.')) {
@@ -593,7 +541,6 @@ class VoiceAgent {
 
       console.log('Recognized intent for question response:', questionResult.intent);
 
-      // Final response
       const response = {
         interested: true,
         noticePeriod,
@@ -626,7 +573,6 @@ class VoiceAgent {
       
       await this.speak(summary + 'We will get back to you soon. Have a great day!');
       
-      // Enhanced logging for debugging
       console.log('Preparing to save interview results to the database...');
       console.log('Candidate ID:', candidateId);
       console.log('Job ID:', jobId);
@@ -637,7 +583,6 @@ class VoiceAgent {
       console.log('Available Date:', response.availableDate);
       console.log('Confirmed:', response.confirmed);
 
-      // Save interview results to the database
       const query = 'INSERT INTO interview_results (candidate_id, job_id, interested, notice_period, current_ctc, expected_ctc, available_date, confirmed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';
       const values = [candidateId, jobId, response.interested, response.noticePeriod, response.currentCtc, response.expectedCtc, response.availableDate, response.confirmed];
 
@@ -657,7 +602,6 @@ class VoiceAgent {
     }
   }
 
-  // Clean up resources
   cleanup() {
     if (this.recognizer) {
       this.recognizer.free();
@@ -669,8 +613,7 @@ class VoiceAgent {
     }
     this.isInitialized = false;
   }
-
-  // Function to get the next occurrence of a day
+      
   getNextDate(day) {
     const today = moment();
     const targetDay = moment().day(day);

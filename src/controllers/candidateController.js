@@ -1,6 +1,5 @@
 const pool = require('../config/database');
 
-// Get all candidates
 const getAllCandidates = async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM candidates ORDER BY created_at DESC');
@@ -11,7 +10,6 @@ const getAllCandidates = async (req, res) => {
   }
 };
 
-// Get a specific candidate
 const getCandidateById = async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM candidates WHERE id = $1', [req.params.id]);
@@ -26,7 +24,6 @@ const getCandidateById = async (req, res) => {
   }
 };
 
-// Create a new candidate
 const createCandidate = async (req, res) => {
   try {
     const { name, phone, email, current_ctc, expected_ctc, notice_period, experience_years } = req.body;
@@ -45,7 +42,6 @@ const createCandidate = async (req, res) => {
   }
 };
 
-// Update a candidate
 const updateCandidate = async (req, res) => {
   try {
     const { name, phone, email, current_ctc, expected_ctc, notice_period, experience_years } = req.body;
@@ -67,8 +63,7 @@ const updateCandidate = async (req, res) => {
     res.status(500).json({ error: 'Failed to update candidate', details: error.message });
   }
 };
-
-// Delete a candidate
+  
 const deleteCandidate = async (req, res) => {
   try {
     const { rows } = await pool.query('DELETE FROM candidates WHERE id = $1 RETURNING *', [req.params.id]);

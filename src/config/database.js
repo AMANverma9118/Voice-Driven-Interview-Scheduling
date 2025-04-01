@@ -14,7 +14,6 @@ const pool = new Pool({
   retryDelay: 1000, 
 });
 
-// Test the connection with retries
 async function testConnection() {
   let retries = 3;
   while (retries > 0) {
@@ -30,13 +29,11 @@ async function testConnection() {
         console.error('Failed to connect to database after multiple attempts:', err);
         throw err;
       }
-      // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 }
 
-// Run the connection test
 testConnection().catch(err => {
   console.error('Database connection failed:', err);
 });

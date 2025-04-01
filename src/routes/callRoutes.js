@@ -3,13 +3,11 @@ const { makeCall } = require('../telephony/twilioClient');
 
 const router = express.Router();
 
-// Helper function to validate phone numbers
 function isValidPhoneNumber(number) {
   const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 format
   return phoneRegex.test(number);
 }
-
-// Define the route for making a call
+  
 router.post('/make-call', (req, res) => {
   const { to, from, url } = req.body;
 

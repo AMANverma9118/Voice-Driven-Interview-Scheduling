@@ -8,7 +8,6 @@ const {
   deleteJob
 } = require('../controllers/jobController');
 
-// Routes
 router.get('/', getAllJobs);
 router.get('/:id', getJobById);
 router.post('/', createJob);

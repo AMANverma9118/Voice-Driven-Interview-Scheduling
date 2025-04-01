@@ -8,7 +8,6 @@ const {
   deleteAppointment
 } = require('../controllers/appointmentController');
 
-// Routes
 router.get('/', getAllAppointments);
 router.get('/:id', getAppointmentById);
 router.post('/', createAppointment);

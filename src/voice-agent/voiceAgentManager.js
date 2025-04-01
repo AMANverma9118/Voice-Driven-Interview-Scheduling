@@ -53,7 +53,7 @@ class VoiceAgentManager {
       return;
     }
     
-    // Check if the executable exists
+
     console.log('Executable exists:', fs.existsSync(resolvedPath));
     if (!fs.existsSync(resolvedPath)) {
       console.warn(`Sox executable not found at ${resolvedPath}`);
@@ -61,7 +61,6 @@ class VoiceAgentManager {
       return;
     }
 
-    // Set Sox path in environment
     process.env.SOX_PATH = resolvedPath;
     process.env.PATH = `${soxDir};${process.env.PATH}`;
     console.log('Sox found and configured successfully');
@@ -90,7 +89,6 @@ class VoiceAgentManager {
           return;
         }
         
-        // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, 1000 * this.initializationAttempts));
       }
     }
@@ -113,6 +111,5 @@ class VoiceAgentManager {
   }
 }
 
-// Create and export a singleton instance
 const voiceAgentManager = new VoiceAgentManager();
 module.exports = voiceAgentManager; 

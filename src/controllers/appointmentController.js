@@ -1,7 +1,6 @@
 const pool = require('../config/database');
 const calendarService = require('../services/calendarService');
 
-// Get all appointments
 const getAllAppointments = async (req, res) => {
   try {
     const { rows } = await pool.query(`
@@ -16,7 +15,6 @@ const getAllAppointments = async (req, res) => {
   }
 };
 
-// Get a specific appointment
 const getAppointmentById = async (req, res) => {
   try {
     const { rows } = await pool.query(`
@@ -36,12 +34,10 @@ const getAppointmentById = async (req, res) => {
   }
 };
 
-// Create a new appointment
 const createAppointment = async (req, res) => {
   try {
     const { job_id, candidate_id, date_time, status } = req.body;
 
-    // Get job and candidate details
     const { rows: jobRows } = await pool.query('SELECT title FROM jobs WHERE id = $1', [job_id]);
     const { rows: candidateRows } = await pool.query('SELECT name FROM candidates WHERE id = $1', [candidate_id]);
 
@@ -51,7 +47,6 @@ const createAppointment = async (req, res) => {
 
     let calendarEventId = null;
     try {
-      // Create calendar event
       const eventEndTime = new Date(date_time);
       eventEndTime.setHours(eventEndTime.getHours() + 1); // 1-hour interview
 
@@ -65,10 +60,8 @@ const createAppointment = async (req, res) => {
       calendarEventId = calendarEvent.id;
     } catch (calendarError) {
       console.error('Error creating calendar event:', calendarError);
-      // Continue without calendar event - don't fail the appointment creation
     }
 
-    // Create appointment in database
     const { rows } = await pool.query(
       'INSERT INTO appointments (job_id, candidate_id, date_time, status, calendar_event_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [job_id, candidate_id, date_time, status, calendarEventId]
@@ -84,12 +77,10 @@ const createAppointment = async (req, res) => {
   }
 };
 
-// Update an appointment
 const updateAppointment = async (req, res) => {
   try {
     const { job_id, candidate_id, date_time, status } = req.body;
 
-    // Get appointment details
     const { rows: appointmentRows } = await pool.query('SELECT calendar_event_id FROM appointments WHERE id = $1', [req.params.id]);
     
     if (!appointmentRows.length) {
@@ -97,7 +88,6 @@ const updateAppointment = async (req, res) => {
     }
 
     let calendarError = null;
-    // Update calendar event if date/time changed
     if (date_time && appointmentRows[0].calendar_event_id) {
       try {
         const eventEndTime = new Date(date_time);
@@ -119,7 +109,6 @@ const updateAppointment = async (req, res) => {
       }
     }
 
-    // Update appointment in database
     const { rows } = await pool.query(
       'UPDATE appointments SET job_id = $1, candidate_id = $2, date_time = $3, status = $4 WHERE id = $5 RETURNING *',
       [job_id, candidate_id, date_time, status, req.params.id]
@@ -135,10 +124,8 @@ const updateAppointment = async (req, res) => {
   }
 };
 
-// Delete an appointment
 const deleteAppointment = async (req, res) => {
   try {
-    // Get appointment details
     const { rows: appointmentRows } = await pool.query('SELECT calendar_event_id FROM appointments WHERE id = $1', [req.params.id]);
     
     if (!appointmentRows.length) {
@@ -146,7 +133,6 @@ const deleteAppointment = async (req, res) => {
     }
 
     let calendarError = null;
-    // Delete calendar event if it exists
     if (appointmentRows[0].calendar_event_id) {
       try {
         await calendarService.deleteEvent(appointmentRows[0].calendar_event_id);
@@ -155,8 +141,7 @@ const deleteAppointment = async (req, res) => {
         calendarError = 'Failed to delete calendar event';
       }
     }
-
-    // Delete appointment from database
+    
     await pool.query('DELETE FROM appointments WHERE id = $1', [req.params.id]);
 
     res.json({ 
