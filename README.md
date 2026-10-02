@@ -45,7 +45,7 @@ Interview Desk is a voice-driven hiring desk. An admin opens roles and adds the 
 
 ## Run it
 
-You need Node.js 20 or newer, and a MongoDB database. Atlas works. A local MongoDB works too.
+You need Node.js 22, and a MongoDB database. Atlas works. A local MongoDB works too.
 
 ```bash
 npm install --ignore-scripts
@@ -110,7 +110,7 @@ In the Render dashboard, point the service at the repository root:
 - Runtime: Node
 - Build command: `npm install`
 - Start command: `npm start`
-- Node version: 20
+- Node version: 22
 
 `npm install` on Render should run normally. The speech library compiles a small native piece (`ffi-napi`) during install. Render’s Linux image can do that. If the build log stops on `ffi-napi`, the API process can still start, but the spoken interview will not hear answers until that compile succeeds.
 
