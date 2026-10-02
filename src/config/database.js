@@ -1,41 +1,47 @@
-const { Pool } = require('pg');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  },
+let connecting = null;
 
-  max: 10,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 10000,
-  maxRetries: 3,
-  retryDelay: 1000, 
-});
-
-async function testConnection() {
-  let retries = 3;
-  while (retries > 0) {
-    try {
-      const client = await pool.connect();
-      console.log('Successfully connected to PostgreSQL database');
-      client.release();
-      return;
-    } catch (err) {
-      retries--;
-      console.error(`Connection attempt failed. Retries left: ${retries}`);
-      if (retries === 0) {
-        console.error('Failed to connect to database after multiple attempts:', err);
-        throw err;
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  }
+function mongoUri() {
+  return process.env.MONGODB_URI || process.env.DATABASE_URL || '';
 }
 
-testConnection().catch(err => {
-  console.error('Database connection failed:', err);
-});
+function isConnected() {
+  return mongoose.connection.readyState === 1;
+}
 
-module.exports = pool; 
+async function connectDB() {
+  if (isConnected()) return true;
+
+  const uri = mongoUri();
+  if (!uri) {
+    console.error('Set MONGODB_URI or DATABASE_URL in .env before starting the server.');
+    return false;
+  }
+
+  if (!connecting) {
+    connecting = mongoose
+      .connect(uri, {
+        dbName: process.env.DB_NAME || 'interview_scheduler',
+        serverSelectionTimeoutMS: 12000,
+      })
+      .then(() => {
+        console.log(`Connected to MongoDB (${mongoose.connection.name})`);
+        return true;
+      })
+      .catch((error) => {
+        connecting = null;
+        console.error('MongoDB connection failed:', error.message);
+        return false;
+      });
+  }
+
+  return connecting;
+}
+
+module.exports = {
+  mongoose,
+  connectDB,
+  isConnected,
+};

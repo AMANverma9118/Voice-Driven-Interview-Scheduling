@@ -1,3 +1,4 @@
+-- Legacy PostgreSQL schema. The app now stores data in MongoDB.
 -- Create jobs table
 CREATE TABLE IF NOT EXISTS jobs (
     id SERIAL PRIMARY KEY,

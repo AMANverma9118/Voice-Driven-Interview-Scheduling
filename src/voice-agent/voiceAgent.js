@@ -7,7 +7,9 @@ const moment = require('moment');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const pool = require('../config/database');
+const Job = require('../models/Job');
+const Candidate = require('../models/Candidate');
+const InterviewResult = require('../models/InterviewResult');
 
 class VoiceAgent {
   constructor() {
@@ -402,28 +404,20 @@ class VoiceAgent {
 
   async getCandidateAndJobDetails(candidateId, jobId) {
     try {
-      const { rows: candidateRows } = await pool.query(
-        'SELECT name FROM candidates WHERE id = $1',
-        [candidateId]
-      );
-      
-      if (!candidateRows.length) {
+      const candidate = await Candidate.findOne({ _id: candidateId, owner: this.ownerId });
+      if (!candidate) {
         throw new Error('Candidate not found');
       }
 
-      const { rows: jobRows } = await pool.query(
-        'SELECT title FROM jobs WHERE id = $1',
-        [jobId]
-      );
-      
-      if (!jobRows.length) {
+      const job = await Job.findOne({ _id: jobId, owner: this.ownerId });
+      if (!job) {
         throw new Error('Job not found');
       }
 
       return {
-        candidateName: candidateRows[0].name,
-        jobTitle: jobRows[0].title,
-        companyName: 'our company' // You can fetch this from a company table if you have one
+        candidateName: candidate.name,
+        jobTitle: job.title,
+        companyName: process.env.COMPANY_NAME || 'Interview Desk',
       };
     } catch (error) {
       console.error('Error fetching candidate and job details:', error);
@@ -583,16 +577,23 @@ class VoiceAgent {
       console.log('Available Date:', response.availableDate);
       console.log('Confirmed:', response.confirmed);
 
-      const query = 'INSERT INTO interview_results (candidate_id, job_id, interested, notice_period, current_ctc, expected_ctc, available_date, confirmed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';
-      const values = [candidateId, jobId, response.interested, response.noticePeriod, response.currentCtc, response.expectedCtc, response.availableDate, response.confirmed];
-
-      pool.query(query, values, (error, result) => {
-        if (error) {
-          console.error('Error saving interview results:', error);
-        } else {
-          console.log('Interview results saved successfully');
-        }
-      });
+      try {
+        await InterviewResult.create({
+          candidate: candidateId,
+          job: jobId,
+          interested: response.interested,
+          notice_period: response.noticePeriod ?? null,
+          current_ctc: response.currentCtc ?? null,
+          expected_ctc: response.expectedCtc ?? null,
+          available_date: response.availableDate ? new Date(response.availableDate) : null,
+          confirmed: response.confirmed,
+          source: 'voice',
+          owner: this.ownerId,
+        });
+        console.log('Interview results saved successfully');
+      } catch (error) {
+        console.error('Error saving interview results:', error);
+      }
 
       return response;
     } catch (error) {

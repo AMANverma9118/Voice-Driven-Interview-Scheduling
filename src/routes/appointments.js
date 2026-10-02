@@ -8,10 +8,12 @@ const {
   deleteAppointment
 } = require('../controllers/appointmentController');
 
-router.get('/', getAllAppointments);
-router.get('/:id', getAppointmentById);
-router.post('/', createAppointment);
-router.put('/:id', updateAppointment);
-router.delete('/:id', deleteAppointment);
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+router.get('/', wrap(getAllAppointments));
+router.get('/:id', wrap(getAppointmentById));
+router.post('/', wrap(createAppointment));
+router.put('/:id', wrap(updateAppointment));
+router.delete('/:id', wrap(deleteAppointment));
 
 module.exports = router; 

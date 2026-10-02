@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const requireAdmin = require('../middleware/requireAdmin');
 const {
   getAllJobs,
   getJobById,
@@ -8,10 +9,12 @@ const {
   deleteJob
 } = require('../controllers/jobController');
 
-router.get('/', getAllJobs);
-router.get('/:id', getJobById);
-router.post('/', createJob);
-router.put('/:id', updateJob);
-router.delete('/:id', deleteJob);
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+router.get('/', wrap(getAllJobs));
+router.get('/:id', wrap(getJobById));
+router.post('/', requireAdmin, wrap(createJob));
+router.put('/:id', requireAdmin, wrap(updateJob));
+router.delete('/:id', requireAdmin, wrap(deleteJob));
 
 module.exports = router; 

@@ -2,11 +2,8 @@ require('dotenv').config();
 
 module.exports = {
   database: {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'interview_scheduler',
-    port: process.env.DB_PORT || 3306
+    uri: process.env.MONGODB_URI || process.env.DATABASE_URL || '',
+    name: process.env.DB_NAME || 'interview_scheduler',
   },
   server: {
     port: process.env.PORT || 3000

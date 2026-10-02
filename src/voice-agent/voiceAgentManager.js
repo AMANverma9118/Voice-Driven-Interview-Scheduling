@@ -27,7 +27,7 @@ class VoiceAgentManager {
     }
 
     // Check if Sox exists
-    const soxPath = path.join(process.cwd(), 'sox-14.4.2', 'sox.exe');
+    const soxPath = process.env.SOX_PATH || path.join(process.cwd(), 'sox-14.4.2', 'sox.exe');
     console.log('Checking Sox installation...');
     console.log('Current working directory:', process.cwd());
     console.log('Looking for Sox at:', soxPath);

@@ -5,13 +5,19 @@ const {
   getCandidateById,
   createCandidate,
   updateCandidate,
-  deleteCandidate
+  deleteCandidate,
+  getMyProfile,
+  saveMyProfile,
+  adminResume,
 } = require('../controllers/candidateController');
 
-router.get('/', getAllCandidates);
-router.get('/:id', getCandidateById);
-router.post('/', createCandidate);
-router.put('/:id', updateCandidate);
-router.delete('/:id', deleteCandidate);
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+router.get('/', wrap(getAllCandidates));
+router.get('/:id/resume', wrap(adminResume));
+router.get('/:id', wrap(getCandidateById));
+router.post('/', wrap(createCandidate));
+router.put('/:id', wrap(updateCandidate));
+router.delete('/:id', wrap(deleteCandidate));
 
 module.exports = router;

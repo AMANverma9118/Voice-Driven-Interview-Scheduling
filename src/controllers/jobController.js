@@ -1,76 +1,70 @@
-const pool = require('../config/database');
+const Job = require('../models/Job');
+const { shapeJob } = require('../utils/shape');
+const { text } = require('../utils/validate');
+
+function jobPayload(body) {
+  const title = text(body.title);
+  const description = text(body.description);
+  const requirements = text(body.requirements);
+  const missing = [];
+  if (!title) missing.push('title');
+  if (!description) missing.push('description');
+  if (!requirements) missing.push('requirements');
+  if (missing.length) {
+    return { error: `Missing ${missing.join(', ')}` };
+  }
+
+  const status = body.status === 'closed' ? 'closed' : 'open';
+  return {
+    value: {
+      title,
+      description,
+      requirements,
+      department: text(body.department),
+      location: text(body.location),
+      status,
+    },
+  };
+}
 
 const getAllJobs = async (req, res) => {
-  try {
-    const { rows } = await pool.query('SELECT * FROM jobs ORDER BY created_at DESC');
-    res.json(rows);
-  } catch (error) {
-    console.error('Error fetching jobs:', error);
-    res.status(500).json({ error: 'Failed to fetch jobs' });
-  }
+  const filter = req.user.role === 'admin' ? {} : { status: 'open' };
+  const jobs = await Job.find(filter).sort({ createdAt: -1 });
+  res.json(jobs.map(shapeJob));
 };
 
 const getJobById = async (req, res) => {
-  try {
-    const { rows } = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
-    
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-    res.json(rows[0]);
-  } catch (error) {
-    console.error('Error fetching job:', error);
-    res.status(500).json({ error: 'Failed to fetch job' });
-  }
+  const filter = req.user.role === 'admin'
+    ? { _id: req.params.id }
+    : { _id: req.params.id, status: 'open' };
+  const job = await Job.findOne(filter);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json(shapeJob(job));
 };
 
 const createJob = async (req, res) => {
-  try {
-    const { title, description, requirements } = req.body;
-    
-    const { rows } = await pool.query(
-      'INSERT INTO jobs (title, description, requirements) VALUES ($1, $2, $3) RETURNING *',
-      [title, description, requirements]
-    );
-    
-    res.status(201).json(rows[0]);
-  } catch (error) {
-    console.error('Error creating job:', error);
-    res.status(500).json({ error: 'Failed to create job', details: error.message });
-  }
+  const parsed = jobPayload(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const job = await Job.create({ ...parsed.value, owner: req.user.id });
+  res.status(201).json(shapeJob(job));
 };
 
 const updateJob = async (req, res) => {
-  try {
-    const { title, description, requirements } = req.body;
-    
-    const { rows } = await pool.query(
-      'UPDATE jobs SET title = $1, description = $2, requirements = $3 WHERE id = $4 RETURNING *',
-      [title, description, requirements, req.params.id]
-    );
-    
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-    res.json(rows[0]);
-  } catch (error) {
-    console.error('Error updating job:', error);
-    res.status(500).json({ error: 'Failed to update job', details: error.message });
-  }
+  const parsed = jobPayload(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const job = await Job.findOneAndUpdate(
+    { _id: req.params.id },
+    parsed.value,
+    { new: true, runValidators: true }
+  );
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json(shapeJob(job));
 };
-  
+
 const deleteJob = async (req, res) => {
-  try {
-    const { rows } = await pool.query('DELETE FROM jobs WHERE id = $1 RETURNING *', [req.params.id]);
-    
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-    res.json({ message: 'Job deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting job:', error);
-    res.status(500).json({ error: 'Failed to delete job', details: error.message });
-  }
+  const job = await Job.findOneAndDelete({ _id: req.params.id });
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json({ message: 'Job deleted successfully' });
 };
 
 module.exports = {
@@ -78,5 +72,5 @@ module.exports = {
   getJobById,
   createJob,
   updateJob,
-  deleteJob
-}; 
+  deleteJob,
+};

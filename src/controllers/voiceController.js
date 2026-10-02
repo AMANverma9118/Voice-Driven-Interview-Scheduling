@@ -1,11 +1,11 @@
-const voiceAgentManager = require('../voice-agent/voiceAgentManager');
 const path = require('path');
 const fs = require('fs');
 
 
 const conductVoiceInterview = async (req, res) => {
   try {
-    const { candidateId, jobId } = req.body;
+    const candidateId = req.body.candidateId || req.body.candidate_id;
+    const jobId = req.body.jobId || req.body.job_id;
     
     if (!candidateId || !jobId) {
       return res.status(400).json({
@@ -18,7 +18,7 @@ const conductVoiceInterview = async (req, res) => {
       });
     }
 
-    const soxPath = path.join(process.cwd(), 'sox-14.4.2', 'sox.exe');
+    const soxPath = process.env.SOX_PATH || path.join(process.cwd(), 'sox-14.4.2', 'sox.exe');
     const resolvedPath = path.resolve(soxPath);
     const soxDir = path.dirname(resolvedPath);
     
@@ -63,6 +63,7 @@ const conductVoiceInterview = async (req, res) => {
       });
     }
 
+    const voiceAgentManager = require('../voice-agent/voiceAgentManager');
     await voiceAgentManager.initialize();
     
     if (!voiceAgentManager.isInitialized) {
@@ -78,6 +79,7 @@ const conductVoiceInterview = async (req, res) => {
     }
     
     const agent = voiceAgentManager.getAgent();
+    agent.ownerId = req.user.id;
     const results = await agent.conductInterview(candidateId, jobId);
     res.json(results);
   } catch (error) {
@@ -94,14 +96,6 @@ const conductVoiceInterview = async (req, res) => {
   }
 };
 
-const cleanup = () => {
-  voiceAgentManager.cleanup();
-  process.exit(0);
-};
-
-process.on('SIGTERM', cleanup);
-
 module.exports = {
   conductVoiceInterview,
-  cleanup
 }; 

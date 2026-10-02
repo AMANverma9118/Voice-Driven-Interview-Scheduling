@@ -1,11 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { conductVoiceInterview } = require('../controllers/voiceController');
 
-router.post('/interview', conductVoiceInterview);
+async function runInterview(req, res) {
+  const { conductVoiceInterview } = require('../controllers/voiceController');
+  return conductVoiceInterview(req, res);
+}
 
-process.on('SIGTERM', () => {
-  process.exit(0);
+router.post('/interview', (req, res, next) => {
+  runInterview(req, res).catch(next);
 });
 
-module.exports = router; 
+router.post('/start-interview', (req, res, next) => {
+  runInterview(req, res).catch(next);
+});
+
+module.exports = router;
