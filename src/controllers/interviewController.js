@@ -7,8 +7,8 @@ const { shapeInterview } = require('../utils/shape');
 const { pcmToWav } = require('../utils/wav');
 const { isId, num, text } = require('../utils/validate');
 
-function interviewQuery() {
-  return InterviewResult.find()
+function interviewQuery(companyId) {
+  return InterviewResult.find({ company: companyId })
     .select('-turns.audio')
     .populate('job', 'title')
     .populate('candidate', 'name')
@@ -30,7 +30,7 @@ function readTurns(body) {
 }
 
 const getAllInterviews = async (req, res) => {
-  const rows = await interviewQuery();
+  const rows = await interviewQuery(req.user.companyId);
   res.json(rows.map(shapeInterview));
 };
 
@@ -55,17 +55,17 @@ const createInterview = async (req, res) => {
     return res.status(400).json({ error: 'A confirmed call needs a time' });
   }
 
-  const job = await Job.findOne(isAdmin ? { _id: jobId } : { _id: jobId, status: 'open' });
+  const job = await Job.findOne({ _id: jobId, company: req.user.companyId, status: 'open' });
   if (!job) return res.status(404).json({ error: 'Job not found' });
 
   let candidate;
   if (isAdmin) {
     const candidateId = req.body.candidate_id || req.body.candidateId;
     if (!isId(candidateId)) return res.status(400).json({ error: 'Choose both a person and a role' });
-    candidate = await Candidate.findById(candidateId);
+    candidate = await Candidate.findOne({ _id: candidateId, company: req.user.companyId });
   } else {
     const phone = text(req.body.phone) || 'not given';
-    candidate = await Candidate.findOne({ user: req.user.id });
+    candidate = await Candidate.findOne({ user: req.user.id, company: req.user.companyId });
     if (!candidate) {
       candidate = await Candidate.create({
         name: req.user.name,
@@ -73,6 +73,7 @@ const createInterview = async (req, res) => {
         phone,
         owner: job.owner || req.user.id,
         user: req.user.id,
+        company: req.user.companyId,
         status: 'new',
       });
     } else if (text(req.body.phone)) {
@@ -133,6 +134,7 @@ const createInterview = async (req, res) => {
       calendar_event_id: calendarEventId,
       notes: text(req.body.notes),
       owner: req.user.id,
+      company: req.user.companyId,
     });
     candidate.status = 'scheduled';
   } else if (!interested) {
@@ -157,6 +159,7 @@ const createInterview = async (req, res) => {
     appointment: appointment ? appointment._id : null,
     turns: readTurns(req.body),
     owner: req.user.id,
+    company: req.user.companyId,
   });
 
   const saved = await InterviewResult.findById(interview._id)
@@ -170,9 +173,9 @@ const createInterview = async (req, res) => {
 };
 
 const listMyInterviews = async (req, res) => {
-  const candidate = await Candidate.findOne({ user: req.user.id });
+  const candidate = await Candidate.findOne({ user: req.user.id, company: req.user.companyId });
   if (!candidate) return res.json([]);
-  const rows = await InterviewResult.find({ candidate: candidate._id })
+  const rows = await InterviewResult.find({ candidate: candidate._id, company: req.user.companyId })
     .select('-turns.audio')
     .populate('job', 'title')
     .populate('candidate', 'name')
@@ -195,8 +198,8 @@ const myTurnAudio = async (req, res) => {
   if (!isId(req.params.id) || !Number.isInteger(index) || index < 0) {
     return res.status(400).json({ error: 'That recording is missing' });
   }
-  const candidate = await Candidate.findOne({ user: req.user.id });
-  const interview = await InterviewResult.findById(req.params.id);
+  const candidate = await Candidate.findOne({ user: req.user.id, company: req.user.companyId });
+  const interview = await InterviewResult.findOne({ _id: req.params.id, company: req.user.companyId });
   if (!candidate || !interview || String(interview.candidate) !== String(candidate._id)) {
     return res.status(404).json({ error: 'That recording is missing' });
   }
@@ -208,7 +211,7 @@ const adminTurnAudio = async (req, res) => {
   if (!isId(req.params.id) || !Number.isInteger(index) || index < 0) {
     return res.status(400).json({ error: 'That recording is missing' });
   }
-  const interview = await InterviewResult.findById(req.params.id);
+  const interview = await InterviewResult.findOne({ _id: req.params.id, company: req.user.companyId });
   if (!interview) return res.status(404).json({ error: 'That recording is missing' });
   return sendTurnAudio(interview, index, res);
 };

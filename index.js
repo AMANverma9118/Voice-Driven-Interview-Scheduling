@@ -55,8 +55,10 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/auth', requireDb, require('./src/routes/auth'));
+app.use('/api/join', requireDb, require('./src/routes/join'));
 app.use('/api/settings', requireDb, require('./src/routes/settings'));
 app.use('/api/users', requireDb, requireAuth, require('./src/routes/users'));
+app.use('/api/companies', requireDb, requireAuth, require('./src/routes/companies'));
 app.use('/api/jobs', requireDb, requireAuth, require('./src/routes/jobs'));
 app.get('/api/me/profile', requireDb, requireAuth, (req, res, next) => Promise.resolve(getMyProfile(req, res)).catch(next));
 app.put('/api/me/profile', requireDb, requireAuth, (req, res, next) => Promise.resolve(saveMyProfile(req, res)).catch(next));

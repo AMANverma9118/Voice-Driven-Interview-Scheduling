@@ -1,4 +1,5 @@
 const Settings = require('../models/Settings');
+const Company = require('../models/Company');
 const { text } = require('../utils/validate');
 
 const DEFAULTS = {
@@ -10,9 +11,9 @@ const DEFAULTS = {
   rail: '#221e1a',
 };
 
-function shape(doc) {
+function shape(doc, fallbackName) {
   return {
-    companyName: doc?.companyName || DEFAULTS.companyName,
+    companyName: doc?.companyName || fallbackName || DEFAULTS.companyName,
     logo: doc?.logo || '',
     paper: doc?.paper || DEFAULTS.paper,
     ink: doc?.ink || DEFAULTS.ink,
@@ -26,12 +27,19 @@ function isColor(value) {
 }
 
 const getSettings = async (req, res) => {
-  const doc = await Settings.findOne({ key: 'desk' });
-  res.json(shape(doc));
+  if (!req.user?.companyId) return res.json(shape(null));
+  const [doc, company] = await Promise.all([
+    Settings.findOne({ company: req.user.companyId }),
+    Company.findById(req.user.companyId),
+  ]);
+  res.json(shape(doc, company?.name));
 };
 
 const updateSettings = async (req, res) => {
-  const companyName = text(req.body.companyName) || DEFAULTS.companyName;
+  if (!req.user.companyId) {
+    return res.status(403).json({ error: 'This account is not on a company desk' });
+  }
+  const companyName = text(req.body.companyName).slice(0, 80) || DEFAULTS.companyName;
   const logo = typeof req.body.logo === 'string' ? req.body.logo : '';
   if (logo && !logo.startsWith('data:image/')) {
     return res.status(400).json({ error: 'Logo must be an image' });
@@ -48,10 +56,11 @@ const updateSettings = async (req, res) => {
   }
 
   const doc = await Settings.findOneAndUpdate(
-    { key: 'desk' },
-    { key: 'desk', companyName, logo, ...colors },
+    { company: req.user.companyId },
+    { company: req.user.companyId, companyName, logo, ...colors, key: `company-${req.user.companyId}` },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
+  await Company.updateOne({ _id: req.user.companyId }, { name: companyName });
   res.json(shape(doc));
 };
 

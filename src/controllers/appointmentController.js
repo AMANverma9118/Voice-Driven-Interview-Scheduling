@@ -8,8 +8,8 @@ const { isId, text } = require('../utils/validate');
 
 const STATUSES = ['scheduled', 'completed', 'cancelled'];
 
-function listQuery(owner) {
-  return Appointment.find()
+function listQuery(companyId) {
+  return Appointment.find({ company: companyId })
     .populate('job', 'title')
     .populate('candidate', 'name')
     .sort({ date_time: 1 });
@@ -68,12 +68,12 @@ async function syncCalendar(action, details) {
 }
 
 const getAllAppointments = async (req, res) => {
-  const rows = await listQuery(req.user.id);
+  const rows = await listQuery(req.user.companyId);
   res.json(rows.map(shapeAppointment));
 };
 
 const getAppointmentById = async (req, res) => {
-  const row = await Appointment.findOne({ _id: req.params.id })
+  const row = await Appointment.findOne({ _id: req.params.id, company: req.user.companyId })
     .populate('job', 'title')
     .populate('candidate', 'name');
   if (!row) return res.status(404).json({ error: 'Appointment not found' });
@@ -93,8 +93,8 @@ const createAppointment = async (req, res) => {
     return res.status(400).json({ error: 'Date is not valid' });
   }
 
-  const job = await Job.findById(job_id);
-  const candidate = await Candidate.findById(candidate_id);
+  const job = await Job.findOne({ _id: job_id, company: req.user.companyId });
+  const candidate = await Candidate.findOne({ _id: candidate_id, company: req.user.companyId });
   if (!job || !candidate) {
     return res.status(404).json({ error: 'Job or candidate not found' });
   }
@@ -120,6 +120,7 @@ const createAppointment = async (req, res) => {
     calendar_event_id: calendar.id,
     notes: text(req.body.notes),
     owner: req.user.id,
+    company: req.user.companyId,
   });
 
   if (status === 'scheduled') {
@@ -138,7 +139,7 @@ const createAppointment = async (req, res) => {
 };
 
 const updateAppointment = async (req, res) => {
-  const existing = await Appointment.findOne({ _id: req.params.id });
+  const existing = await Appointment.findOne({ _id: req.params.id, company: req.user.companyId });
   if (!existing) return res.status(404).json({ error: 'Appointment not found' });
 
   const jobId = req.body.job_id || existing.job.toString();
@@ -150,8 +151,8 @@ const updateAppointment = async (req, res) => {
     return res.status(400).json({ error: 'Job, candidate, and a valid date are required' });
   }
 
-  const job = await Job.findById(jobId);
-  const candidate = await Candidate.findById(candidateId);
+  const job = await Job.findOne({ _id: jobId, company: req.user.companyId });
+  const candidate = await Candidate.findOne({ _id: candidateId, company: req.user.companyId });
   if (!job || !candidate) {
     return res.status(404).json({ error: 'Job or candidate not found' });
   }
@@ -212,7 +213,7 @@ const updateAppointment = async (req, res) => {
 };
 
 const deleteAppointment = async (req, res) => {
-  const existing = await Appointment.findOne({ _id: req.params.id });
+  const existing = await Appointment.findOne({ _id: req.params.id, company: req.user.companyId });
   if (!existing) return res.status(404).json({ error: 'Appointment not found' });
 
   let calendarError = null;

@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Company = require('../models/Company');
 const assertCaptcha = require('../middleware/captcha');
 const { hashToken, makeToken, sendVerification } = require('../services/mailer');
 const { text } = require('../utils/validate');
@@ -25,8 +26,34 @@ function publicUser(user) {
     email: user.email,
     emailVerified: user.emailVerified,
     role: user.role || 'candidate',
+    platform: Boolean(user.platform),
     revoked: Boolean(user.revoked),
   };
+}
+
+async function accountView(user) {
+  let company = user.company;
+  if (company && !company.slug) company = await Company.findById(company);
+  return {
+    ...publicUser(user),
+    companyName: company?.name || '',
+    companySlug: company?.slug || '',
+  };
+}
+
+async function usersMatching(email, password, companyId) {
+  const query = { email };
+  if (companyId) query.company = companyId;
+  const users = email ? await User.find(query) : [];
+  const matches = [];
+  for (const user of users) {
+    if (await bcrypt.compare(password, user.passwordHash)) matches.push(user);
+  }
+  return matches;
+}
+
+async function issueSession(user) {
+  return { token: signToken(user), user: await accountView(user) };
 }
 
 function validEmail(email) {
@@ -42,38 +69,7 @@ async function issueVerification(user) {
 }
 
 const register = async (req, res) => {
-  await assertCaptcha(req.body.captchaToken);
-  const name = text(req.body.name);
-  const email = text(req.body.email).toLowerCase();
-  const password = req.body.password || '';
-
-  if (!name || !validEmail(email)) {
-    return res.status(400).json({ error: 'Name and a valid email are required' });
-  }
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'Use at least 8 characters for the password' });
-  }
-
-  const existing = await User.findOne({ email });
-  if (existing) {
-    return res.status(409).json({ error: 'An account with that email already exists' });
-  }
-
-  const user = new User({
-    name,
-    email,
-    passwordHash: await bcrypt.hash(password, 10),
-    emailVerified: false,
-  });
-  const delivery = await issueVerification(user);
-
-  res.status(201).json({
-    message: delivery.sent
-      ? 'Account created. Check your email to verify it.'
-      : 'Account created. Email is not configured on this server, so use the verification link below.',
-    email: user.email,
-    verificationUrl: delivery.sent ? undefined : delivery.url,
-  });
+  res.status(403).json({ error: 'The desk owner creates each company admin. Sign in when you have an account.' });
 };
 
 const verifyEmail = async (req, res) => {
@@ -94,8 +90,7 @@ const verifyEmail = async (req, res) => {
   await user.save();
   res.json({
     message: 'Email verified.',
-    token: signToken(user),
-    user: publicUser(user),
+    ...(await issueSession(user)),
   });
 };
 
@@ -120,12 +115,17 @@ const login = async (req, res) => {
   await assertCaptcha(req.body.captchaToken);
   const email = text(req.body.email).toLowerCase();
   const password = req.body.password || '';
-  const user = email ? await User.findOne({ email }) : null;
-  const matches = user ? await bcrypt.compare(password, user.passwordHash) : false;
+  const matches = await usersMatching(email, password);
 
-  if (!user || !matches) {
+  if (!matches.length) {
     return res.status(401).json({ error: 'Email or password is wrong' });
   }
+  if (matches.length > 1) {
+    return res.status(409).json({
+      error: 'This email is on more than one company. Open that company link to sign in.',
+    });
+  }
+  const user = matches[0];
   if (user.revoked) {
     return res.status(403).json({ error: 'This account has been revoked' });
   }
@@ -136,13 +136,22 @@ const login = async (req, res) => {
     });
   }
 
-  res.json({ token: signToken(user), user: publicUser(user) });
+  res.json(await issueSession(user));
 };
 
 const me = async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(401).json({ error: 'Sign in again' });
-  res.json(publicUser(user));
+  res.json(await accountView(user));
 };
 
-module.exports = { register, verifyEmail, resend, login, me };
+module.exports = {
+  register,
+  verifyEmail,
+  resend,
+  login,
+  me,
+  validEmail,
+  usersMatching,
+  issueSession,
+};

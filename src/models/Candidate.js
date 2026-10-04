@@ -15,6 +15,7 @@ const candidateSchema = new mongoose.Schema(
       default: 'new',
     },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     resume_name: { type: String, trim: true, default: '' },
     resume_type: { type: String, trim: true, default: '' },

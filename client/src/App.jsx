@@ -3,17 +3,18 @@ import { useAuth } from "./auth";
 import { Login, Register, Verify } from "./pages/Account";
 import Desk from "./pages/Desk";
 import Home from "./pages/Home";
+import Join from "./pages/Join";
 import Interview from "./pages/Interview";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Record from "./pages/Record";
 
-import { homeFor } from "./home";
+import { homeFor, signInPath } from "./home";
 
 function RequireAuth({ children }) {
   const { user, ready } = useAuth();
   if (!ready) return <p className="loading gate-wait">Opening the desk…</p>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={signInPath()} replace />;
   return children;
 }
 
@@ -43,6 +44,7 @@ export default function App() {
       <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
       <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
       <Route path="/verify" element={<Verify />} />
+      <Route path="/join/:slug" element={<Join />} />
       <Route path="/profile" element={<RequireAuth><CandidateOnly><Profile /></CandidateOnly></RequireAuth>} />
       <Route path="/interview" element={<RequireAuth><CandidateOnly><Interview /></CandidateOnly></RequireAuth>} />
       <Route path="/record" element={<RequireAuth><CandidateOnly><Record /></CandidateOnly></RequireAuth>} />

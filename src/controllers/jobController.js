@@ -28,15 +28,15 @@ function jobPayload(body) {
 }
 
 const getAllJobs = async (req, res) => {
-  const filter = req.user.role === 'admin' ? {} : { status: 'open' };
+  const filter = { company: req.user.companyId };
+  if (req.user.role !== 'admin') filter.status = 'open';
   const jobs = await Job.find(filter).sort({ createdAt: -1 });
   res.json(jobs.map(shapeJob));
 };
 
 const getJobById = async (req, res) => {
-  const filter = req.user.role === 'admin'
-    ? { _id: req.params.id }
-    : { _id: req.params.id, status: 'open' };
+  const filter = { _id: req.params.id, company: req.user.companyId };
+  if (req.user.role !== 'admin') filter.status = 'open';
   const job = await Job.findOne(filter);
   if (!job) return res.status(404).json({ error: 'Job not found' });
   res.json(shapeJob(job));
@@ -45,7 +45,7 @@ const getJobById = async (req, res) => {
 const createJob = async (req, res) => {
   const parsed = jobPayload(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
-  const job = await Job.create({ ...parsed.value, owner: req.user.id });
+  const job = await Job.create({ ...parsed.value, owner: req.user.id, company: req.user.companyId });
   res.status(201).json(shapeJob(job));
 };
 
@@ -53,7 +53,7 @@ const updateJob = async (req, res) => {
   const parsed = jobPayload(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
   const job = await Job.findOneAndUpdate(
-    { _id: req.params.id },
+    { _id: req.params.id, company: req.user.companyId },
     parsed.value,
     { new: true, runValidators: true }
   );
@@ -62,7 +62,7 @@ const updateJob = async (req, res) => {
 };
 
 const deleteJob = async (req, res) => {
-  const job = await Job.findOneAndDelete({ _id: req.params.id });
+  const job = await Job.findOneAndDelete({ _id: req.params.id, company: req.user.companyId });
   if (!job) return res.status(404).json({ error: 'Job not found' });
   res.json({ message: 'Job deleted successfully' });
 };

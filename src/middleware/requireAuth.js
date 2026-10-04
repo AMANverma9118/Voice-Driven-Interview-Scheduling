@@ -27,6 +27,8 @@ function requireAuth(req, res, next) {
         email: user.email,
         name: user.name,
         role: user.role || 'candidate',
+        platform: Boolean(user.platform),
+        companyId: user.company ? user.company.toString() : null,
       };
       return next();
     })
@@ -34,3 +36,11 @@ function requireAuth(req, res, next) {
 }
 
 module.exports = requireAuth;
+
+function optionalAuth(req, res, next) {
+  const header = req.get('authorization') || '';
+  if (!header.startsWith('Bearer ')) return next();
+  return requireAuth(req, res, next);
+}
+
+requireAuth.optionalAuth = optionalAuth;

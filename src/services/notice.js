@@ -36,6 +36,7 @@ async function tellCandidate({ candidate, authorId, when, appointmentId }) {
 
   const label = whenLabel(when);
   await Message.create({
+    company: candidate.company,
     candidate: candidate._id,
     author: authorId,
     authorRole: 'admin',

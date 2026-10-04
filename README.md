@@ -1,12 +1,14 @@
 # Interview Desk
 
-Interview Desk is a voice-driven hiring desk. An admin opens roles and adds the people who will interview. A candidate signs in, fills in their own details, uploads a resume, and takes a spoken interview in the browser. The desk asks the questions in a natural voice, listens to the answers, and books a weekday and a time. The recording stays with the interview. If the admin moves that time, the candidate gets a bell notice.
+Interview Desk is a voice-driven hiring desk for more than one company. The desk owner creates each company admin. That admin runs one company’s roles, people, and calendar, and shares a signup link. A candidate who opens that link signs up for that company only, fills in their details, uploads a resume, and takes a spoken interview in the browser. The desk asks the questions in a natural voice, listens to the answers, and books a weekday and a time. The recording stays with the interview. If the admin moves that time, the candidate gets a bell notice.
 
 ## Who uses it
 
-**Admin.** Runs the desk: roles, accounts, the month calendar, the call sheet, and messages.
+**Desk owner.** The account from `ADMIN_EMAIL` in `.env`. Creates a company and its admin. Sees every company admin, and can copy each company’s signup link.
 
-**Candidate.** Signs in, saves a profile and a resume, takes the spoken interview, and reads notices about a changed time.
+**Company admin.** Runs one company: roles, candidates, the month calendar, the call sheet, messages, and the link candidates use to sign up.
+
+**Candidate.** Opens one company’s link, signs up, saves a profile and a resume, takes the spoken interview, and reads notices about a changed time. Their account stays on that company.
 
 ## Features
 
@@ -14,9 +16,19 @@ Interview Desk is a voice-driven hiring desk. An admin opens roles and adds the 
 
 - Each person has their own account, with a signed token kept in the browser.
 - Sign-up and sign-in use a Google reCAPTCHA v2 checkbox.
-- New accounts confirm their email. If mail is not configured, the confirmation link is shown on the page.
-- The first admin is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`. The password is stored as a hash.
-- An admin can add other admins from Team, and can revoke an account. A revoked person cannot sign in.
+- The desk owner is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`. The password is stored as a hash.
+- A public visitor cannot become an admin. The desk owner creates each company admin from Team, with a company name, a name, an email, and a password.
+- That admin then adds candidates for their own company, or shares the company link so candidates sign up themselves.
+- An admin can revoke an account. A revoked person cannot sign in.
+
+### Companies stay separate
+
+- Every role, candidate, booking, message, and studio setting belongs to one company.
+- Company A’s admin sees Company A’s book. Company B’s admin sees Company B’s book.
+- On Team, each company has a candidate link, shaped like `/join/company-name`. The admin copies it and can post it on LinkedIn or any other site.
+- A person who opens Company A’s link signs up on that page and then schedules the interview with Company A. The signup stays on Company A.
+- The same person can later open Company B’s link and sign up again. That second account stays on Company B. The same email can exist once per company.
+- If one email is on two companies, the shared sign-in page asks them to open the company link, so the wrong book is not chosen.
 
 ### Spoken interview
 
@@ -72,7 +84,7 @@ npm start
 
 Open `http://localhost:3000`.
 
-Sign in with the admin email and password from `.env`. From Team, add a candidate with a name, email, and password. That person signs in, opens Details, presses Edit, and saves a phone number before the interview.
+Sign in with the admin email and password from `.env`. From Team, add a company admin, then sign in as that admin. On Team, copy the candidate link and open it. The signup page names that company. After signup, the candidate goes to the interview and books a time on that company’s calendar.
 
 For frontend work while the API is already running:
 
@@ -143,19 +155,20 @@ Set `VITE_API_URL` to the Render origin with no slash at the end, for example `h
 
 `client/vercel.json` sends every route to `index.html`, so a refresh on `/overview` or `/profile` stays in the app.
 
-After both are live, sign in on the Vercel address. Register, open the interview, and confirm a booking shows on the Render-backed calendar.
+After both are live, sign in on the Vercel address as the desk owner, create a company admin, and copy that company’s `/join/...` link. A signup on that link should book onto that company’s calendar.
 
 ## What is on each page
 
 | Page | Who | What it is for |
 | --- | --- | --- |
-| Overview | Admin | Open roles, people on file, interviews in the next 7 days |
-| Roles | Admin | Jobs the spoken interview can be about |
-| Team | Admin | Create a candidate account, or make someone an admin |
-| People | Admin | The profile and resume the candidate saved |
-| Calendar | Admin | Month of booked times, with change, write, and remove |
-| Call sheet | Admin | Answers and recordings from the spoken interview |
-| Studio | Admin | Name, logo, and colours |
+| Overview | Company admin | Open roles, people on file, interviews in the next 7 days |
+| Roles | Company admin | Jobs the spoken interview can be about |
+| Team | Desk owner and company admin | The owner creates company admins and copies their links. A company admin copies their own link and adds candidates |
+| People | Company admin | The profile and resume the candidate saved |
+| Calendar | Company admin | Month of booked times, with change, write, and remove |
+| Call sheet | Company admin | Answers and recordings from the spoken interview |
+| Studio | Company admin | Name, logo, and colours for this company |
+| `/join/company-name` | Candidate | Signup and sign-in for that company only, then the interview |
 | Details | Candidate | Profile and resume |
 | Interview | Candidate | The spoken call that books a time |
 | Record | Candidate | What they said, and the audio |
@@ -165,8 +178,10 @@ After both are live, sign in on the Vercel address. Register, open the interview
 
 The browser calls these. Admin routes require an admin token.
 
-- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/verify`, `POST /api/auth/resend`, `GET /api/auth/me`
+- `POST /api/auth/login`, `POST /api/auth/verify`, `POST /api/auth/resend`, `GET /api/auth/me`
 - `GET /api/auth/config` — the reCAPTCHA site key
+- `GET /api/join/:slug`, `POST /api/join/:slug/register`, `POST /api/join/:slug/login` — one company’s public signup page
+- `GET/POST /api/companies`, `PATCH /api/companies/:id` — the desk owner’s company admins
 - `GET/PUT /api/me/profile`, `GET /api/me/resume`
 - `POST /api/me/hear`, `POST /api/me/speak`
 - `POST /api/interviews`, `GET /api/interviews/mine`

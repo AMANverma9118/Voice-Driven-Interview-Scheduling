@@ -893,12 +893,17 @@ a.btn {
   margin: 22px 0 8px;
 }
 
-.gate-switch a {
+.gate-switch a,
+.gate-switch button {
   text-decoration: none;
   padding-bottom: 4px;
+  background: none;
+  border: 0;
+  cursor: pointer;
 }
 
-.gate-switch a.is-active { border-bottom: 2px solid var(--brick); }
+.gate-switch a.is-active,
+.gate-switch button.is-active { border-bottom: 2px solid var(--brick); }
 
 .gate-wait { padding: 48px; }
 

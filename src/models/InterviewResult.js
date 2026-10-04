@@ -19,6 +19,7 @@ const interviewResultSchema = new mongoose.Schema(
       audio: { type: Buffer, default: null },
       recorded: { type: Boolean, default: false },
     }],
+    company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   },
   { timestamps: true }

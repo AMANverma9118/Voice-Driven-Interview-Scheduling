@@ -83,12 +83,12 @@ function candidatePayload(body) {
 }
 
 const getAllCandidates = async (req, res) => {
-  const candidates = await Candidate.find().select('-resume').sort({ createdAt: -1 });
+  const candidates = await Candidate.find({ company: req.user.companyId }).select('-resume').sort({ createdAt: -1 });
   res.json(candidates.map(shapeCandidate));
 };
 
 const getCandidateById = async (req, res) => {
-  const candidate = await Candidate.findOne({ _id: req.params.id }).select('-resume');
+  const candidate = await Candidate.findOne({ _id: req.params.id, company: req.user.companyId }).select('-resume');
   if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
   res.json(shapeCandidate(candidate));
 };
@@ -96,12 +96,12 @@ const getCandidateById = async (req, res) => {
 const createCandidate = async (req, res) => {
   const parsed = candidatePayload(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
-  const candidate = await Candidate.create({ ...parsed.value, owner: req.user.id });
+  const candidate = await Candidate.create({ ...parsed.value, owner: req.user.id, company: req.user.companyId });
   res.status(201).json(shapeCandidate(candidate));
 };
 
 const getMyProfile = async (req, res) => {
-  const candidate = await Candidate.findOne({ user: req.user.id }).select('-resume');
+  const candidate = await Candidate.findOne({ user: req.user.id, company: req.user.companyId }).select('-resume');
   res.json(candidate ? shapeCandidate(candidate) : null);
 };
 
@@ -112,13 +112,14 @@ const saveMyProfile = async (req, res) => {
   if (file.error) return res.status(400).json({ error: file.error });
   const details = { ...parsed.value };
   delete details.status;
-  let candidate = await Candidate.findOne({ user: req.user.id });
+  let candidate = await Candidate.findOne({ user: req.user.id, company: req.user.companyId });
   if (!candidate) {
     candidate = new Candidate({
       ...details,
       status: 'new',
       user: req.user.id,
       owner: req.user.id,
+      company: req.user.companyId,
     });
     applyResume(candidate, file);
     await candidate.save();
@@ -131,12 +132,12 @@ const saveMyProfile = async (req, res) => {
 };
 
 const myResume = async (req, res) => {
-  const candidate = await Candidate.findOne({ user: req.user.id });
+  const candidate = await Candidate.findOne({ user: req.user.id, company: req.user.companyId });
   return sendResume(res, candidate);
 };
 
 const adminResume = async (req, res) => {
-  const candidate = await Candidate.findById(req.params.id);
+  const candidate = await Candidate.findOne({ _id: req.params.id, company: req.user.companyId });
   return sendResume(res, candidate);
 };
 
@@ -144,7 +145,7 @@ const updateCandidate = async (req, res) => {
   const parsed = candidatePayload(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
   const candidate = await Candidate.findOneAndUpdate(
-    { _id: req.params.id },
+    { _id: req.params.id, company: req.user.companyId },
     parsed.value,
     { new: true, runValidators: true }
   );
@@ -153,7 +154,7 @@ const updateCandidate = async (req, res) => {
 };
 
 const deleteCandidate = async (req, res) => {
-  const candidate = await Candidate.findOneAndDelete({ _id: req.params.id });
+  const candidate = await Candidate.findOneAndDelete({ _id: req.params.id, company: req.user.companyId });
   if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
   res.json({
     message: 'Candidate deleted successfully',

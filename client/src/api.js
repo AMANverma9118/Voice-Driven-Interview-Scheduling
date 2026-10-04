@@ -14,9 +14,12 @@ export async function api(path, options = {}) {
     const error = new Error(data.error || "The desk could not complete that");
     error.status = response.status;
     error.data = data;
-    if (response.status === 401 && !path.startsWith("/api/auth")) {
+    const companySignIn = path.startsWith("/api/join");
+    if (response.status === 401 && !path.startsWith("/api/auth") && !companySignIn) {
       localStorage.removeItem("desk_token");
-      if (window.location.pathname !== "/login") window.location.assign("/login");
+      const company = sessionStorage.getItem("desk_company");
+      const dest = company ? `/join/${company}?in=1` : "/login";
+      if (window.location.pathname !== dest.split("?")[0]) window.location.assign(dest);
     }
     throw error;
   }

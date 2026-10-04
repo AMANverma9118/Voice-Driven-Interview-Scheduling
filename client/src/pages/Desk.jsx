@@ -38,7 +38,7 @@ const copy = {
   },
   team: {
     title: "Team",
-    lede: "Add the person here. They sign in, fill in experience and pay themselves, and that file shows under People.",
+    lede: "Add the candidates for this company. They sign in and fill in their own details.",
   },
 };
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { homeFor } from "../home";
 import { useAuth } from "../auth";
@@ -8,7 +8,7 @@ import { Brand } from "../settings";
 
 const TEST_SITE_KEY = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
 
-function useSiteKey() {
+export function useSiteKey() {
   const [siteKey, setSiteKey] = useState("");
   const [error, setError] = useState("");
 
@@ -26,14 +26,14 @@ function Gate({ children }) {
     <div className="gate">
       <aside className="rail">
         <Brand to="/login" />
-        <p className="rail-foot">Admins run the desk. Candidates take the spoken interview.</p>
+        <p className="rail-foot">The desk owner creates each company admin. That admin adds the people who take the interview.</p>
       </aside>
       <main>{children}</main>
     </div>
   );
 }
 
-function CaptchaNote({ siteKey }) {
+export function CaptchaNote({ siteKey }) {
   if (siteKey !== TEST_SITE_KEY) return null;
   return (
     <p className="note">
@@ -45,12 +45,16 @@ function CaptchaNote({ siteKey }) {
 
 export function Login() {
   const navigate = useNavigate();
+  const [search] = useSearchParams();
   const { signIn } = useAuth();
   const { siteKey, error: configError } = useSiteKey();
   const captcha = useRef(null);
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const desk = search.get("desk") === "1";
+  if (desk) sessionStorage.removeItem("desk_company");
+  const company = desk ? "" : sessionStorage.getItem("desk_company");
 
   async function onSubmit(event) {
     event.preventDefault();
@@ -76,14 +80,15 @@ export function Login() {
     }
   }
 
+  if (company) return <Navigate to={`/join/${company}?in=1`} replace />;
+
   return (
     <Gate>
       <p className="kicker">Sign in</p>
       <h1>Your desk</h1>
-      <p className="lede">Roles and interviews on this account are not visible to anyone else.</p>
+      <p className="lede">Sign in to the company desk you belong to.</p>
       <div className="gate-switch">
         <Link to="/login" className="is-active">Sign in</Link>
-        <Link to="/register">Create an account</Link>
       </div>
       {(error || configError) && <div className="banner" role="alert">{error || configError}</div>}
       {error.includes("Verify your email") && (
@@ -103,76 +108,14 @@ export function Login() {
 }
 
 export function Register() {
-  const navigate = useNavigate();
-  const { siteKey, error: configError } = useSiteKey();
-  const captcha = useRef(null);
-  const [token, setToken] = useState("");
-  const [error, setError] = useState("");
-  const [result, setResult] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  async function onSubmit(event) {
-    event.preventDefault();
-    setError("");
-    setBusy(true);
-    const form = new FormData(event.target);
-    if (form.get("password") !== form.get("confirm")) {
-      setError("Those passwords do not match");
-      setBusy(false);
-      return;
-    }
-    try {
-      const data = await api("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify({
-          name: form.get("name"),
-          email: form.get("email"),
-          password: form.get("password"),
-          captchaToken: token,
-        }),
-      });
-      if (data.verificationUrl) {
-        const path = data.verificationUrl.replace(window.location.origin, "") || data.verificationUrl;
-        navigate(path.startsWith("/") ? path : `/verify?token=${new URL(data.verificationUrl).searchParams.get("token")}`);
-        return;
-      }
-      setResult(data);
-    } catch (err) {
-      setError(err.message);
-      captcha.current?.reset();
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <Gate>
-      <p className="kicker">Create an account</p>
-      <h1>A desk of your own</h1>
-      <p className="lede">Create the account, confirm the email, and the desk opens.</p>
-      <div className="gate-switch">
-        <Link to="/login">Sign in</Link>
-        <Link to="/register" className="is-active">Create an account</Link>
+      <p className="kicker">Accounts</p>
+      <h1>An admin creates your account</h1>
+      <p className="lede">The desk owner creates each company admin. That admin then adds the people who take the interview. Sign in when you have an account.</p>
+      <div className="actions">
+        <Link className="btn" to="/login">Sign in</Link>
       </div>
-      {(error || configError) && <div className="banner" role="alert">{error || configError}</div>}
-      {result ? (
-        <div className="flash">
-          <p>{result.message}</p>
-          <p>Open the link in that email. Once it confirms, you are taken into the desk.</p>
-        </div>
-      ) : (
-        <form className="gate-form" onSubmit={onSubmit}>
-          <label>Name<input name="name" required autoComplete="name" /></label>
-          <label>Email<input name="email" type="email" required autoComplete="email" /></label>
-          <label>Password<input name="password" type="password" required minLength={8} autoComplete="new-password" /></label>
-          <label>Confirm password<input name="confirm" type="password" required minLength={8} autoComplete="new-password" /></label>
-          <Recaptcha ref={captcha} siteKey={siteKey} onToken={setToken} />
-          <CaptchaNote siteKey={siteKey} />
-          <div className="actions">
-            <button className="btn" type="submit" disabled={busy}>{busy ? "Creating…" : "Create account"}</button>
-          </div>
-        </form>
-      )}
     </Gate>
   );
 }

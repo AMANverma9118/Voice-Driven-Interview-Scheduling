@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { homeFor } from "../home";
+import { homeFor, signInPath } from "../home";
 import { useAuth } from "../auth";
 import { Brand } from "../settings";
 
@@ -14,7 +14,7 @@ const TURNS = [
 
 export default function Home() {
   const { user } = useAuth();
-  const enter = user ? homeFor(user) : "/login";
+  const enter = user ? homeFor(user) : signInPath();
   const [step, setStep] = useState(0);
   const turn = TURNS[step];
 
@@ -36,8 +36,7 @@ export default function Home() {
             <Link className="btn" to={enter}>Open the desk</Link>
           ) : (
             <>
-              <Link to="/login">Sign in</Link>
-              <Link className="btn" to="/register">Create an account</Link>
+            <Link className="btn" to={signInPath()}>Sign in</Link>
             </>
           )}
         </nav>
@@ -47,8 +46,7 @@ export default function Home() {
         <h1>The desk asks, listens, and books the hour.</h1>
         <p className="lede">A candidate speaks the interview. The recording stays. The time they say is the time that lands on the book.</p>
         <div className="home-actions">
-          <Link className="btn" to={user ? enter : "/register"}>{user ? "Open the desk" : "Start an account"}</Link>
-          {!user && <Link className="btn ghost" to="/login">Sign in</Link>}
+          <Link className="btn" to={enter}>{user ? "Open the desk" : "Sign in"}</Link>
         </div>
         <section className="home-stage" aria-label="A sample of the spoken interview">
           <div className="home-sheet">

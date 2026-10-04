@@ -14,7 +14,7 @@ function shapeUser(user) {
 }
 
 const listUsers = async (req, res) => {
-  const users = await User.find().sort({ createdAt: 1 });
+  const users = await User.find({ company: req.user.companyId }).sort({ createdAt: 1 });
   res.json(users.map(shapeUser));
 };
 
@@ -34,9 +34,16 @@ const createUser = async (req, res) => {
     return res.status(400).json({ error: 'Use at least 8 characters for the password' });
   }
 
-  const existing = await User.findOne({ email });
+  if (!req.user.companyId) {
+    return res.status(403).json({ error: 'This account is not on a company desk' });
+  }
+  if (req.body.role === 'admin') {
+    return res.status(403).json({ error: 'The desk owner creates each company admin' });
+  }
+
+  const existing = await User.findOne({ email, company: req.user.companyId });
   if (existing) {
-    return res.status(409).json({ error: 'An account with that email already exists' });
+    return res.status(409).json({ error: 'This company already has an account with that email' });
   }
 
   const user = await User.create({
@@ -45,27 +52,17 @@ const createUser = async (req, res) => {
     passwordHash: await bcrypt.hash(password, 10),
     emailVerified: true,
     role: 'candidate',
+    company: req.user.companyId,
   });
   res.status(201).json(shapeUser(user));
 };
 
 const updateUser = async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findOne({ _id: req.params.id, company: req.user.companyId });
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  if (req.body.role !== undefined) {
-    const role = req.body.role === 'admin' ? 'admin' : 'candidate';
-    if (user.role === 'admin' && role !== 'admin') {
-      const others = await User.countDocuments({
-        role: 'admin',
-        revoked: { $ne: true },
-        _id: { $ne: user._id },
-      });
-      if (others === 0) {
-        return res.status(400).json({ error: 'Keep at least one admin' });
-      }
-    }
-    user.role = role;
+  if (req.body.role !== undefined && req.body.role !== user.role) {
+    return res.status(403).json({ error: 'The desk owner creates each company admin' });
   }
 
   if (req.body.revoked !== undefined) {
@@ -75,12 +72,13 @@ const updateUser = async (req, res) => {
     }
     if (revoked && user.role === 'admin') {
       const others = await User.countDocuments({
+        company: req.user.companyId,
         role: 'admin',
         revoked: { $ne: true },
         _id: { $ne: user._id },
       });
       if (others === 0) {
-        return res.status(400).json({ error: 'Keep at least one admin' });
+        return res.status(400).json({ error: 'Keep at least one admin for this company' });
       }
     }
     user.revoked = revoked;

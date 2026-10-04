@@ -12,6 +12,7 @@ const appointmentSchema = new mongoose.Schema(
     },
     calendar_event_id: { type: String, default: null },
     notes: { type: String, trim: true, default: '' },
+    company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   },
   { timestamps: true }
