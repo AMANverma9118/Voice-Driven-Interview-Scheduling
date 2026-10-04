@@ -10,15 +10,19 @@ const TEST_SITE_KEY = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
 
 export function useSiteKey() {
   const [siteKey, setSiteKey] = useState("");
+  const [signupSlug, setSignupSlug] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     api("/api/auth/config")
-      .then((data) => setSiteKey(data.recaptchaSiteKey || ""))
+      .then((data) => {
+        setSiteKey(data.recaptchaSiteKey || "");
+        setSignupSlug(data.signupSlug || "");
+      })
       .catch((err) => setError(err.message));
   }, []);
 
-  return { siteKey, error };
+  return { siteKey, signupSlug, error };
 }
 
 function Gate({ children }) {
@@ -47,7 +51,7 @@ export function Login() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const { signIn } = useAuth();
-  const { siteKey, error: configError } = useSiteKey();
+  const { siteKey, signupSlug, error: configError } = useSiteKey();
   const captcha = useRef(null);
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
@@ -89,6 +93,7 @@ export function Login() {
       <p className="lede">Sign in to the company desk you belong to.</p>
       <div className="gate-switch">
         <Link to="/login" className="is-active">Sign in</Link>
+        {signupSlug && <Link to={`/join/${signupSlug}`}>Sign up</Link>}
       </div>
       {(error || configError) && <div className="banner" role="alert">{error || configError}</div>}
       {error.includes("Verify your email") && (
@@ -108,11 +113,13 @@ export function Login() {
 }
 
 export function Register() {
+  const { signupSlug, error } = useSiteKey();
+  if (signupSlug) return <Navigate to={`/join/${signupSlug}`} replace />;
   return (
     <Gate>
-      <p className="kicker">Accounts</p>
-      <h1>An admin creates your account</h1>
-      <p className="lede">The desk owner creates each company admin. That admin then adds the people who take the interview. Sign in when you have an account.</p>
+      <p className="kicker">Sign up</p>
+      <h1>{error ? "Signup is not ready" : "Opening signup…"}</h1>
+      <p className="lede">{error || "The form opens on the desk owner’s company."}</p>
       <div className="actions">
         <Link className="btn" to="/login">Sign in</Link>
       </div>

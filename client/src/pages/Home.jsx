@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { homeFor, signInPath } from "../home";
 import { useAuth } from "../auth";
+import { api } from "../api";
 import { Brand } from "../settings";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -16,7 +17,12 @@ export default function Home() {
   const { user } = useAuth();
   const enter = user ? homeFor(user) : signInPath();
   const [step, setStep] = useState(0);
+  const [signupSlug, setSignupSlug] = useState("");
   const turn = TURNS[step];
+
+  useEffect(() => {
+    api("/api/auth/config").then((data) => setSignupSlug(data.signupSlug || "")).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -36,7 +42,8 @@ export default function Home() {
             <Link className="btn" to={enter}>Open the desk</Link>
           ) : (
             <>
-            <Link className="btn" to={signInPath()}>Sign in</Link>
+              {signupSlug && <Link to={`/join/${signupSlug}`}>Sign up</Link>}
+              <Link className="btn" to={signInPath()}>Sign in</Link>
             </>
           )}
         </nav>
@@ -46,7 +53,8 @@ export default function Home() {
         <h1>The desk asks, listens, and books the hour.</h1>
         <p className="lede">A candidate speaks the interview. The recording stays. The time they say is the time that lands on the book.</p>
         <div className="home-actions">
-          <Link className="btn" to={enter}>{user ? "Open the desk" : "Sign in"}</Link>
+          {!user && signupSlug && <Link className="btn" to={`/join/${signupSlug}`}>Sign up</Link>}
+          <Link className={!user && signupSlug ? "btn ghost" : "btn"} to={enter}>{user ? "Open the desk" : "Sign in"}</Link>
         </div>
         <section className="home-stage" aria-label="A sample of the spoken interview">
           <div className="home-sheet">

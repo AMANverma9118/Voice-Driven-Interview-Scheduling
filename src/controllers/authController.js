@@ -145,12 +145,25 @@ const me = async (req, res) => {
   res.json(await accountView(user));
 };
 
+const publicConfig = async (req, res) => {
+  const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const admin = email
+    ? await User.findOne({ email, role: 'admin' }).populate('company', 'name slug')
+    : null;
+  res.json({
+    recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY || '',
+    signupSlug: admin?.company?.slug || '',
+    signupName: admin?.company?.name || '',
+  });
+};
+
 module.exports = {
   register,
   verifyEmail,
   resend,
   login,
   me,
+  publicConfig,
   validEmail,
   usersMatching,
   issueSession,

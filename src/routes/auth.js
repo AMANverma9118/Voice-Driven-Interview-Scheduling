@@ -6,6 +6,7 @@ const {
   resend,
   login,
   me,
+  publicConfig,
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -14,9 +15,7 @@ const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).cat
   return next(error);
 });
 
-router.get('/config', (req, res) => {
-  res.json({ recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY || '' });
-});
+router.get('/config', wrap(publicConfig));
 router.post('/register', wrap(register));
 router.post('/verify', wrap(verifyEmail));
 router.post('/resend', wrap(resend));
